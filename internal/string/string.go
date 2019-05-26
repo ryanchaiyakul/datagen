@@ -4,6 +4,8 @@ import (
 	slicelib "github.com/ryanchaiyakul/datagen/internal/slice"
 )
 
+// GenString returns a list of strings depending on the input
+// if asciiRange blank, uses all lowercase and uppercase letters
 func GenString(length int, asciiRange [2]int, permutationRange [2]int) []string {
 	validValues := []int{}
 	if asciiRange[0] == 0 && asciiRange[1] == 0 {

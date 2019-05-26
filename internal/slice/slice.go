@@ -5,7 +5,9 @@ import (
 	"sync"
 )
 
-// GenArray returns a multidimensional slice that is one dimensions large than the len(dimensions)
+// GenArray returns a multidimensional slice that contains the permutations of the requested slice array
+// if permutationRange is blank, returns all permutations
+// if the dimension input is invalid, returns nil
 func GenArray(dimensions []int, validValues []int, permutationRange [2]int) interface{} {
 	var ret interface{}
 	permutationChan := make(chan []int)
