@@ -69,14 +69,15 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 				curParams.permutationRange = intList
 			default:
 				if k != "funcid" {
-					http.Error(w, "400 bad request error.", http.StatusBadRequest)
+					http.Error(w, "400 unknown parameter.", http.StatusBadRequest)
 					return
 				}
 			}
-			if curParams.dimensions == nil {
-				http.Error(w, "400 bad request error.", http.StatusBadRequest)
-				return
-			}
+		}
+
+		if curParams.dimensions == nil {
+			http.Error(w, "400 missing dimensions.", http.StatusBadRequest)
+			return
 		}
 		ret = slicelib.GenArray(curParams.dimensions, curParams.validValues, curParams.permutationRange)
 
@@ -87,7 +88,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			case "length":
 				intLength, err := strconv.Atoi(string(v[0][0]))
 				if err != nil {
-					http.Error(w, "400 bad request error.", http.StatusBadRequest)
+					http.Error(w, "400 can not convert length to a string.", http.StatusBadRequest)
 					return
 				}
 				curParams.length = intLength
@@ -111,10 +112,14 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 				curParams.permutationRange = intList
 			default:
 				if k != "funcid" {
-					http.Error(w, "400 bad request error.", http.StatusBadRequest)
+					http.Error(w, "400 unknown parameter.", http.StatusBadRequest)
 					return
 				}
 			}
+		}
+		if curParams.length == 0 {
+			http.Error(w, "400 missing length.", http.StatusBadRequest)
+			return
 		}
 		ret = stringlib.GenString(curParams.length, curParams.asciiRange, curParams.permutationRange)
 	}
