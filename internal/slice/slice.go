@@ -167,8 +167,7 @@ func incrementSingle(base []int, validValues []int, addend int, results chan []i
 	// a copy is used because otherwise you would mutilate the base list
 	temp := append(base[:0:0], base...)
 	for i := 0; i < len(temp); i++ {
-		currentIndex := sliceIndex(len(validValues), func(sliceI int) bool { return validValues[sliceI] == temp[i] })
-		currentIndex += addend
+		currentIndex := addend
 
 		// addend is used as carry over
 		addend = currentIndex / len(validValues)
@@ -191,8 +190,7 @@ func incrementSingleWGSem(base []int, validValues []int, addend int, results cha
 	// a copy is used because otherwise you would mutilate the base list
 	temp := append(base[:0:0], base...)
 	for i := 0; i < len(temp); i++ {
-		currentIndex := sliceIndex(len(validValues), func(sliceI int) bool { return validValues[sliceI] == temp[i] })
-		currentIndex += addend
+		currentIndex := addend
 
 		// addend is used as carry over
 		addend = currentIndex / len(validValues)
@@ -210,8 +208,7 @@ func incrementSingleRet(base []int, validValues []int, addend int) []int {
 	// a copy is used because otherwise you would mutilate the base list
 	temp := append(base[:0:0], base...)
 	for i := 0; i < len(temp); i++ {
-		currentIndex := sliceIndex(len(validValues), func(sliceI int) bool { return validValues[sliceI] == temp[i] })
-		currentIndex += addend
+		currentIndex := addend
 
 		// addend is used as carry over
 		addend = currentIndex / len(validValues)
@@ -222,13 +219,4 @@ func incrementSingleRet(base []int, validValues []int, addend int) []int {
 		}
 	}
 	return nil
-}
-
-func sliceIndex(limit int, predicate func(i int) bool) int {
-	for i := 0; i < limit; i++ {
-		if predicate(i) {
-			return i
-		}
-	}
-	return -1
 }
