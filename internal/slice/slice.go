@@ -167,12 +167,11 @@ func incrementSingle(base []int, validValues []int, addend int, results chan []i
 	// a copy is used because otherwise you would mutilate the base list
 	temp := append(base[:0:0], base...)
 	for i := 0; i < len(temp); i++ {
-		currentIndex := addend
 
 		// addend is used as carry over
-		addend = currentIndex / len(validValues)
+		addend = addend / len(validValues)
 
-		temp[i] = validValues[int(math.Mod(float64(currentIndex), float64(len(validValues))))]
+		temp[i] = validValues[int(math.Mod(float64(addend), float64(len(validValues))))]
 		if addend == 0 {
 			results <- temp
 			return
@@ -190,12 +189,11 @@ func incrementSingleWGSem(base []int, validValues []int, addend int, results cha
 	// a copy is used because otherwise you would mutilate the base list
 	temp := append(base[:0:0], base...)
 	for i := 0; i < len(temp); i++ {
-		currentIndex := addend
 
 		// addend is used as carry over
-		addend = currentIndex / len(validValues)
+		addend = addend / len(validValues)
 
-		temp[i] = validValues[int(math.Mod(float64(currentIndex), float64(len(validValues))))]
+		temp[i] = validValues[int(math.Mod(float64(addend), float64(len(validValues))))]
 		if addend == 0 {
 			results <- temp
 			return
@@ -208,12 +206,11 @@ func incrementSingleRet(base []int, validValues []int, addend int) []int {
 	// a copy is used because otherwise you would mutilate the base list
 	temp := append(base[:0:0], base...)
 	for i := 0; i < len(temp); i++ {
-		currentIndex := addend
 
 		// addend is used as carry over
-		addend = currentIndex / len(validValues)
+		addend = addend / len(validValues)
 
-		temp[i] = validValues[int(math.Mod(float64(currentIndex), float64(len(validValues))))]
+		temp[i] = validValues[int(math.Mod(float64(addend), float64(len(validValues))))]
 		if addend == 0 {
 			return temp
 		}
