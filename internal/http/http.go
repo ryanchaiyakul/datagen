@@ -79,7 +79,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "400 missing dimensions.", http.StatusBadRequest)
 			return
 		}
-		ret = slicelib.GenArray(curParams.dimensions, curParams.validValues, curParams.permutationRange)
+		slicelibRet, err := slicelib.GenArray(curParams.dimensions, curParams.validValues, curParams.permutationRange)
+		if err == nil {
+			ret = slicelibRet
+		}
 
 	case "string":
 		curParams := stringParams{0, [2]int{0, 0}, [2]int{0, 0}}
@@ -121,7 +124,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "400 missing length.", http.StatusBadRequest)
 			return
 		}
-		ret = stringlib.GenString(curParams.length, curParams.asciiRange, curParams.permutationRange)
+		stringlibRet, err := stringlib.GenString(curParams.length, curParams.asciiRange, curParams.permutationRange)
+		if err == nil {
+			ret = stringlibRet
+		}
 	}
 
 	if retEncoded, err := json.Marshal(ret); err == nil {

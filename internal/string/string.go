@@ -6,7 +6,7 @@ import (
 
 // GenString returns a list of strings depending on the input
 // if asciiRange blank, uses all lowercase and uppercase letters
-func GenString(length int, asciiRange [2]int, permutationRange [2]int) []string {
+func GenString(length int, asciiRange [2]int, permutationRange [2]int) ([]string, error) {
 	validValues := []int{}
 	if asciiRange[0] == 0 && asciiRange[1] == 0 {
 		for i := 65; i < 91; i++ {
@@ -21,14 +21,17 @@ func GenString(length int, asciiRange [2]int, permutationRange [2]int) []string 
 		}
 	}
 
-	intList := slicelib.GenArray([]int{length}, validValues, permutationRange).([][]int)
 	retList := []string{}
-	for k := range intList {
-		ret := ""
-		for _, v := range intList[k] {
-			ret += string(v)
+
+	intList, err := slicelib.GenArray([]int{length}, validValues, permutationRange)
+	if err == nil {
+		for k := range intList.([][]int) {
+			ret := ""
+			for _, v := range intList.([][]int)[k] {
+				ret += string(v)
+			}
+			retList = append(retList, ret)
 		}
-		retList = append(retList, ret)
 	}
-	return retList
+	return retList, err
 }

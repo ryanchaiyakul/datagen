@@ -1,15 +1,17 @@
 package slicelib
 
 import (
+	"errors"
 	"math"
 	"sync"
 )
 
 // GenArray returns a multidimensional slice that contains the permutations of the requested slice array
 // if permutationRange is blank, returns all permutations
-// if the dimension input is invalid, returns nil
-func GenArray(dimensions []int, validValues []int, permutationRange [2]int) interface{} {
+func GenArray(dimensions []int, validValues []int, permutationRange [2]int) (interface{}, error) {
 	var ret interface{}
+	var err error
+
 	permutationChan := make(chan []int)
 	length := dimensions[0]
 	if len(dimensions) > 1 {
@@ -18,16 +20,13 @@ func GenArray(dimensions []int, validValues []int, permutationRange [2]int) inte
 		}
 	}
 
-	if permutationRange[0] == 0 && permutationRange[1] == 0 {
-		if dimensionsLength := len(dimensions); dimensionsLength == 1 {
-			permutationRange = [2]int{0, int(math.Pow(float64(len(validValues)), float64(dimensions[0])))}
-		} else {
-			permutationRange[1] = 1
-			for i := 0; i < dimensionsLength; i++ {
-				permutationRange = [2]int{0, permutationRange[1] * dimensions[i]}
-			}
-			permutationRange = [2]int{0, int(math.Pow(float64(len(validValues)), float64(permutationRange[1])))}
-		}
+	if permutationRange[0] < 0 {
+		return nil, errors.New("permutation lower limit out of range")
+	}
+	if permutationCount := maxPermutations(dimensions, validValues); permutationRange[1] > permutationCount-1 {
+		return nil, errors.New("permutation lower limit out of range")
+	} else if permutationRange[0] == 0 && permutationRange[1] == 0 {
+		permutationRange[1] = permutationCount
 	}
 
 	switch len(dimensions) {
@@ -84,7 +83,21 @@ func GenArray(dimensions []int, validValues []int, permutationRange [2]int) inte
 		}
 		ret = permutationList
 	default:
-		ret = nil
+		err = errors.New("slicelib : dimensions requested greater than 4")
+	}
+	return ret, err
+}
+
+func maxPermutations(dimensions []int, validValues []int) int {
+	ret := 0
+	if dimensionsLength := len(dimensions); dimensionsLength == 1 {
+		ret = int(math.Pow(float64(len(validValues)), float64(dimensions[0])))
+	} else {
+		ret = 1
+		for i := 0; i < dimensionsLength; i++ {
+			ret = ret * dimensions[i]
+		}
+		ret = int(math.Pow(float64(len(validValues)), float64(ret)))
 	}
 	return ret
 }
