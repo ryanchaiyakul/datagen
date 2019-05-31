@@ -6,13 +6,11 @@ import (
 	"sync"
 )
 
-// GenArray returns a multidimensional slice that contains the permutations of the requested slice array
+// GenArray returns a 2D slice that contains all the permutations mapped to a single slice
 // if permutationRange is blank, returns all permutations
 func GenArray(dimensions []int, validValues []int, permutationRange [2]int) (interface{}, error) {
-	var ret interface{}
-	var err error
-
 	permutationChan := make(chan []int)
+
 	length := dimensions[0]
 	if len(dimensions) > 1 {
 		for _, v := range dimensions[1:] {
@@ -29,63 +27,13 @@ func GenArray(dimensions []int, validValues []int, permutationRange [2]int) (int
 		permutationRange[1] = permutationCount
 	}
 
-	switch len(dimensions) {
-	case 1:
-		permutationList := [][]int{}
-		go listPermutations(length, validValues, permutationChan, permutationRange)
-		for permutation := range permutationChan {
-			permutationList = append(permutationList, permutation)
-		}
-		ret = permutationList
-	case 2:
-		permutationList := [][][]int{}
-		go listPermutations(length, validValues, permutationChan, permutationRange)
-		for permutation := range permutationChan {
-			permutationInArrayOne := [][]int{}
-			for i := 0; i < dimensions[0]; i++ {
-				permutationInArrayOne = append(permutationInArrayOne, permutation[i*dimensions[1]:(i+1)*dimensions[1]])
-			}
-			permutationList = append(permutationList, permutationInArrayOne)
-		}
-		ret = permutationList
-	case 3:
-		permutationList := [][][][]int{}
-		go listPermutations(length, validValues, permutationChan, permutationRange)
-		for permutation := range permutationChan {
-			permutationInArrayOne := [][][]int{}
-			for i := 0; i < dimensions[0]; i++ {
-				permutationInArrayTwo := [][]int{}
-				for j := 0; j < dimensions[1]*dimensions[0]; j++ {
-					permutationInArrayTwo = append(permutationInArrayTwo, permutation[j*dimensions[2]:(j+1)*dimensions[2]])
-				}
-				permutationInArrayOne = append(permutationInArrayOne, permutationInArrayTwo[i*dimensions[1]:(i+1)*dimensions[1]])
-			}
-			permutationList = append(permutationList, permutationInArrayOne)
-		}
-		ret = permutationList
-	case 4:
-		permutationList := [][][][][]int{}
-		go listPermutations(length, validValues, permutationChan, permutationRange)
-		for permutation := range permutationChan {
-			permutationInArrayOne := [][][][]int{}
-			for i := 0; i < dimensions[0]; i++ {
-				permutationInArrayTwo := [][][]int{}
-				for j := 0; j < dimensions[1]*dimensions[0]; j++ {
-					permutationInArrayThree := [][]int{}
-					for k := 0; k < dimensions[2]*dimensions[1]*dimensions[0]; k++ {
-						permutationInArrayThree = append(permutationInArrayThree, permutation[j*dimensions[3]:(j+1)*dimensions[3]])
-					}
-					permutationInArrayTwo = append(permutationInArrayTwo, permutationInArrayThree[j*dimensions[2]:(j+1)*dimensions[2]])
-				}
-				permutationInArrayOne = append(permutationInArrayOne, permutationInArrayTwo[i*dimensions[1]:(i+1)*dimensions[1]])
-			}
-			permutationList = append(permutationList, permutationInArrayOne)
-		}
-		ret = permutationList
-	default:
-		err = errors.New("slicelib : dimensions requested greater than 4")
+	permutationList := [][]int{}
+	go listPermutations(length, validValues, permutationChan, permutationRange)
+	for permutation := range permutationChan {
+		permutationList = append(permutationList, permutation)
 	}
-	return ret, err
+
+	return permutationList, nil
 }
 
 func maxPermutations(dimensions []int, validValues []int) int {
@@ -181,7 +129,7 @@ func incrementSingle(base []int, validValues []int, addend int, results chan []i
 	temp := append(base[:0:0], base...)
 	for i := 0; i < len(temp); i++ {
 		temp[i] = validValues[int(math.Mod(float64(addend), float64(len(validValues))))]
-		
+
 		// addend is used as carry over
 		addend = addend / len(validValues)
 
@@ -203,7 +151,7 @@ func incrementSingleWGSem(base []int, validValues []int, addend int, results cha
 	temp := append(base[:0:0], base...)
 	for i := 0; i < len(temp); i++ {
 		temp[i] = validValues[int(math.Mod(float64(addend), float64(len(validValues))))]
-		
+
 		// addend is used as carry over
 		addend = addend / len(validValues)
 
@@ -219,8 +167,7 @@ func incrementSingleRet(base []int, validValues []int, addend int) []int {
 	// a copy is used because otherwise you would mutilate the base list
 	temp := append(base[:0:0], base...)
 	for i := 0; i < len(temp); i++ {
-
-        	temp[i] = validValues[int(math.Mod(float64(addend), float64(len(validValues))))]
+		temp[i] = validValues[int(math.Mod(float64(addend), float64(len(validValues))))]
 
 		// addend is used as carry over
 		addend = addend / len(validValues)

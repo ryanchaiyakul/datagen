@@ -35,102 +35,117 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var ret interface{}
-	switch r.URL.Query()["funcid"][0] {
-	case "array":
-		curParams := arrayParams{nil, nil, [2]int{0, 0}}
-		for k, v := range r.URL.Query() {
-			switch k {
-			case "dimensions":
-				strList := strings.Split(v[0], ",")
-				intList := []int{}
-				for _, v := range strList {
-					if intV, err := strconv.Atoi(v); err == nil {
-						intList = append(intList, intV)
-					}
-				}
-				curParams.dimensions = intList
-			case "valid_values":
-				strList := strings.Split(v[0], ",")
-				intList := []int{}
-				for _, v := range strList {
-					if intV, err := strconv.Atoi(v); err == nil {
-						intList = append(intList, intV)
-					}
-				}
-				curParams.validValues = intList
-			case "permutation_range":
-				strList := strings.Split(v[0], ",")
-				intList := [2]int{}
-				for k, v := range strList {
-					if intV, err := strconv.Atoi(v); err == nil {
-						intList[k] = intV
-					}
-				}
-				curParams.permutationRange = intList
-			default:
-				if k != "funcid" {
-					http.Error(w, "400 unknown parameter.", http.StatusBadRequest)
-					return
-				}
-			}
-		}
 
-		if curParams.dimensions == nil {
-			http.Error(w, "400 missing dimensions.", http.StatusBadRequest)
+	if funcid, ok := r.URL.Query()["funcid"]; ok {
+		switch funcid[0] {
+		case "slice":
+			ret = getArray(w, r)
+		case "string":
+			ret = getString(w, r)
+		default:
+			http.Error(w, "400 incorrect funcid", http.StatusBadRequest)
 			return
-		}
-		slicelibRet, err := slicelib.GenArray(curParams.dimensions, curParams.validValues, curParams.permutationRange)
-		if err == nil {
-			ret = slicelibRet
-		}
-
-	case "string":
-		curParams := stringParams{0, [2]int{0, 0}, [2]int{0, 0}}
-		for k, v := range r.URL.Query() {
-			switch k {
-			case "length":
-				intLength, err := strconv.Atoi(string(v[0][0]))
-				if err != nil {
-					http.Error(w, "400 can not convert length to a string.", http.StatusBadRequest)
-					return
-				}
-				curParams.length = intLength
-			case "ascii_range":
-				strList := strings.Split(v[0], ",")
-				intList := [2]int{}
-				for k, v := range strList {
-					if intV, err := strconv.Atoi(v); err == nil {
-						intList[k] = intV
-					}
-				}
-				curParams.asciiRange = intList
-			case "permutation_range":
-				strList := strings.Split(v[0], ",")
-				intList := [2]int{}
-				for k, v := range strList {
-					if intV, err := strconv.Atoi(v); err == nil {
-						intList[k] = intV
-					}
-				}
-				curParams.permutationRange = intList
-			default:
-				if k != "funcid" {
-					http.Error(w, "400 unknown parameter.", http.StatusBadRequest)
-					return
-				}
-			}
-		}
-		if curParams.length == 0 {
-			http.Error(w, "400 missing length.", http.StatusBadRequest)
-			return
-		}
-		stringlibRet, err := stringlib.GenString(curParams.length, curParams.asciiRange, curParams.permutationRange)
-		if err == nil {
-			ret = stringlibRet
 		}
 	}
 
-	if retEncoded, err := json.Marshal(ret); err == nil {
+	if retEncoded, err := json.Marshal(ret); err == nil || retEncoded == nil {
 		w.Write(retEncoded)
 	}
+}
+
+func getArray(w http.ResponseWriter, r *http.Request) interface{} {
+	curParams := arrayParams{nil, nil, [2]int{0, 0}}
+	for k, v := range r.URL.Query() {
+		switch k {
+		case "dimensions":
+			strList := strings.Split(v[0], ",")
+			intList := []int{}
+			for _, v := range strList {
+				if intV, err := strconv.Atoi(v); err == nil {
+					intList = append(intList, intV)
+				}
+			}
+			curParams.dimensions = intList
+		case "valid_values":
+			strList := strings.Split(v[0], ",")
+			intList := []int{}
+			for _, v := range strList {
+				if intV, err := strconv.Atoi(v); err == nil {
+					intList = append(intList, intV)
+				}
+			}
+			curParams.validValues = intList
+		case "permutation_range":
+			strList := strings.Split(v[0], ",")
+			intList := [2]int{}
+			for k, v := range strList {
+				if intV, err := strconv.Atoi(v); err == nil {
+					intList[k] = intV
+				}
+			}
+			curParams.permutationRange = intList
+		default:
+			if k != "funcid" {
+				http.Error(w, "400 unknown parameter.", http.StatusBadRequest)
+				return nil
+			}
+		}
+	}
+
+	if curParams.dimensions == nil {
+		http.Error(w, "400 missing dimensions.", http.StatusBadRequest)
+		return nil
+	}
+	slicelibRet, err := slicelib.GenArray(curParams.dimensions, curParams.validValues, curParams.permutationRange)
+	if err == nil {
+		return slicelibRet
+	}
+	return nil
+}
+
+func getString(w http.ResponseWriter, r *http.Request) interface{} {
+	curParams := stringParams{0, [2]int{0, 0}, [2]int{0, 0}}
+	for k, v := range r.URL.Query() {
+		switch k {
+		case "length":
+			intLength, err := strconv.Atoi(string(v[0][0]))
+			if err != nil {
+				http.Error(w, "400 can not convert length to a string.", http.StatusBadRequest)
+				return nil
+			}
+			curParams.length = intLength
+		case "ascii_range":
+			strList := strings.Split(v[0], ",")
+			intList := [2]int{}
+			for k, v := range strList {
+				if intV, err := strconv.Atoi(v); err == nil {
+					intList[k] = intV
+				}
+			}
+			curParams.asciiRange = intList
+		case "permutation_range":
+			strList := strings.Split(v[0], ",")
+			intList := [2]int{}
+			for k, v := range strList {
+				if intV, err := strconv.Atoi(v); err == nil {
+					intList[k] = intV
+				}
+			}
+			curParams.permutationRange = intList
+		default:
+			if k != "funcid" {
+				http.Error(w, "400 unknown parameter.", http.StatusBadRequest)
+				return nil
+			}
+		}
+	}
+	if curParams.length == 0 {
+		http.Error(w, "400 missing length.", http.StatusBadRequest)
+		return nil
+	}
+	stringlibRet, err := stringlib.GenString(curParams.length, curParams.asciiRange, curParams.permutationRange)
+	if err == nil {
+		return stringlibRet
+	}
+	return nil
 }
