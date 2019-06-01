@@ -9,6 +9,7 @@ import (
 	"strconv"
 )
 
+// GenIntSlice returns a single int slice that can be reshaped into the one described by dimensions
 func GenIntSlice(dimensions []int, validValues []int, permutation int, apiURL string) ([]int, error) {
 	stringDimensions := strconv.Itoa(dimensions[0])
 	for _, dimensionVal := range dimensions[1:] {
@@ -20,7 +21,7 @@ func GenIntSlice(dimensions []int, validValues []int, permutation int, apiURL st
 	}
 	resp, err := http.Get(fmt.Sprintf("%v?funcid=slice&dimensions=%v&valid_values=%v&permutation_range=%v,%v", apiURL, stringDimensions, stringValidValues, permutation, permutation+1))
 	if err != nil {
-		return nil, errors.New("genlib : invalid URL")
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -44,6 +45,7 @@ func GenIntSlice(dimensions []int, validValues []int, permutation int, apiURL st
 	return ret, nil
 }
 
+// GenFloatSlice returns a single float slice that can be reshaped into the one described by dimensions
 func GenFloatSlice(dimensions []int, validValues []int, permutation int, apiURL string) ([]float64, error) {
 	stringDimensions := strconv.Itoa(dimensions[0])
 	for _, dimensionVal := range dimensions[1:] {
@@ -79,6 +81,7 @@ func GenFloatSlice(dimensions []int, validValues []int, permutation int, apiURL 
 	return ret, nil
 }
 
+// ReshapeIntSlice Tries to reshape the single int slice into a multidimensional slice
 func ReshapeIntSlice(dimensions []int, flatSlice []int) (interface{}, error) {
 	var ret interface{}
 	switch len(dimensions) {

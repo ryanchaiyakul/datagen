@@ -32,6 +32,7 @@ func GenString(length int, asciiRange [2]int, permutationRange [2]int) ([]string
 			}
 			retList = append(retList, ret)
 		}
+		return retList, err
 	}
-	return retList, err
+	return nil, err
 }
