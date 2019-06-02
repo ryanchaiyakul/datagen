@@ -32,7 +32,6 @@ func GenArray(dimensions []int, validValues []int, permutationRange [2]int) (int
 	for permutation := range permutationChan {
 		permutationList = append(permutationList, permutation)
 	}
-
 	return permutationList, nil
 }
 
@@ -56,9 +55,9 @@ func listPermutations(length int, validValues []int, results chan []int, permuta
 		base = append(base, validValues[0])
 	}
 	switch permutationCount := permutationRange[1] - permutationRange[0]; {
-	case permutationCount < 1000:
+	case permutationCount < 100:
 		go listPermutationsHelper(base, validValues, permutationRange, results, 10)
-	case permutationCount < 10000:
+	case permutationCount < 1000:
 		go listPermutationsHelper(base, validValues, permutationRange, results, 100)
 	default:
 		go listPermutationsHelperRange(base, validValues, permutationRange, results, 1000)

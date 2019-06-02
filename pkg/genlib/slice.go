@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-// GenIntSlice returns a single int slice that can be reshaped into the one described by dimensions
+// GenIntSlice returns a single int slice that can be reshaped into the multidimensional slice described by dimensions
 func GenIntSlice(dimensions []int, validValues []int, permutation int, apiURL string) ([]int, error) {
 	stringDimensions := strconv.Itoa(dimensions[0])
 	for _, dimensionVal := range dimensions[1:] {
@@ -45,8 +45,8 @@ func GenIntSlice(dimensions []int, validValues []int, permutation int, apiURL st
 	return ret, nil
 }
 
-// GenFloatSlice returns a single float slice that can be reshaped into the one described by dimensions
-func GenFloatSlice(dimensions []int, validValues []int, permutation int, apiURL string) ([]float64, error) {
+// GenIntSliceRange returns a list of single int slices that can be reshaped into the multidimensional slice described by dimensions
+func GenIntSliceRange(dimensions []int, validValues []int, permutationRange [2]int, apiURL string) ([][]int, error) {
 	stringDimensions := strconv.Itoa(dimensions[0])
 	for _, dimensionVal := range dimensions[1:] {
 		stringDimensions = fmt.Sprintf("%v,%v", stringDimensions, strconv.Itoa(dimensionVal))
@@ -55,9 +55,9 @@ func GenFloatSlice(dimensions []int, validValues []int, permutation int, apiURL 
 	for _, validValueVal := range validValues[1:] {
 		stringValidValues = fmt.Sprintf("%v,%v", stringValidValues, strconv.Itoa(validValueVal))
 	}
-	resp, err := http.Get(fmt.Sprintf("%v?funcid=slice&dimensions=%v&valid_values=%v&permutation_range=%v,%v", apiURL, stringDimensions, stringValidValues, permutation, permutation+1))
+	resp, err := http.Get(fmt.Sprintf("%v?funcid=slice&dimensions=%v&valid_values=%v&permutation_range=%v,%v", apiURL, stringDimensions, stringValidValues, permutationRange[0], permutationRange[1]))
 	if err != nil {
-		return nil, errors.New("genlib : invalid URL")
+		return nil, err
 	}
 
 	defer resp.Body.Close()
@@ -70,13 +70,15 @@ func GenFloatSlice(dimensions []int, validValues []int, permutation int, apiURL 
 		return nil, errors.New("genlib : invalid dimension paramter or permutation out of range")
 	}
 
-	ret := []float64{}
+	ret := [][]int{}
 	var tempInterface interface{}
 	json.Unmarshal(body, &tempInterface)
 	for _, permutationInterface := range tempInterface.([]interface{}) {
+		temp := []int{}
 		for _, valueInterface := range permutationInterface.([]interface{}) {
-			ret = append(ret, valueInterface.(float64))
+			temp = append(temp, int(valueInterface.(float64)))
 		}
+		ret = append(ret, temp)
 	}
 	return ret, nil
 }
@@ -119,6 +121,80 @@ func ReshapeIntSlice(dimensions []int, flatSlice []int) (interface{}, error) {
 		ret = temp
 	default:
 		return nil, errors.New("Can not reshape to the number of dimensions requested")
+	}
+	return ret, nil
+}
+
+// GenFloatSlice returns a single float slice that can be reshaped into the multidimensional slice described by dimensions
+func GenFloatSlice(dimensions []int, validValues []int, permutation int, apiURL string) ([]float64, error) {
+	stringDimensions := strconv.Itoa(dimensions[0])
+	for _, dimensionVal := range dimensions[1:] {
+		stringDimensions = fmt.Sprintf("%v,%v", stringDimensions, strconv.Itoa(dimensionVal))
+	}
+	stringValidValues := strconv.Itoa(validValues[0])
+	for _, validValueVal := range validValues[1:] {
+		stringValidValues = fmt.Sprintf("%v,%v", stringValidValues, strconv.Itoa(validValueVal))
+	}
+	resp, err := http.Get(fmt.Sprintf("%v?funcid=slice&dimensions=%v&valid_values=%v&permutation_range=%v,%v", apiURL, stringDimensions, stringValidValues, permutation, permutation+1))
+	if err != nil {
+		return nil, errors.New("genlib : invalid URL")
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if body == nil {
+		return nil, errors.New("genlib : invalid dimension paramter or permutation out of range")
+	}
+
+	ret := []float64{}
+	var tempInterface interface{}
+	json.Unmarshal(body, &tempInterface)
+	for _, permutationInterface := range tempInterface.([]interface{}) {
+		for _, valueInterface := range permutationInterface.([]interface{}) {
+			ret = append(ret, valueInterface.(float64))
+		}
+	}
+	return ret, nil
+}
+
+//GenFloatSliceRange returns a list of single int slices that can be reshaped into the multidimensional slice described by dimensions
+func GenFloatSliceRange(dimensions []int, validValues []int, permutationRange [2]int, apiURL string) ([][]float64, error) {
+	stringDimensions := strconv.Itoa(dimensions[0])
+	for _, dimensionVal := range dimensions[1:] {
+		stringDimensions = fmt.Sprintf("%v,%v", stringDimensions, strconv.Itoa(dimensionVal))
+	}
+	stringValidValues := strconv.Itoa(validValues[0])
+	for _, validValueVal := range validValues[1:] {
+		stringValidValues = fmt.Sprintf("%v,%v", stringValidValues, strconv.Itoa(validValueVal))
+	}
+	resp, err := http.Get(fmt.Sprintf("%v?funcid=slice&dimensions=%v&valid_values=%v&permutation_range=%v,%v", apiURL, stringDimensions, stringValidValues, permutationRange[0], permutationRange[1]))
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if body == nil {
+		return nil, errors.New("genlib : invalid dimension paramter or permutation out of range")
+	}
+
+	ret := [][]float64{}
+	var tempInterface interface{}
+	json.Unmarshal(body, &tempInterface)
+	for _, permutationInterface := range tempInterface.([]interface{}) {
+		temp := []float64{}
+		for _, valueInterface := range permutationInterface.([]interface{}) {
+			temp = append(temp, valueInterface.(float64))
+		}
+		ret = append(ret, temp)
 	}
 	return ret, nil
 }
