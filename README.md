@@ -9,7 +9,7 @@ go run datagen/cmd/httpapi/main.go
 ## HTTP API
 
 ```
-localhost:80?funcid=array&dimensions=4,4&valid_values=0,1&permutation_range=0,100
+localhost:80?funcid=slice&dimensions=4,4&valid_values=0,1&permutation_range=0,100
 localhost:80?funcid=string&length=4&ascii_range=60,90&permutation_range=0,100
 ```
 
