@@ -51,7 +51,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if retEncoded, err := json.Marshal(ret); err == nil || retEncoded == nil {
+	if retEncoded, err := json.Marshal(ret); err == nil || retEncoded != nil {
 		w.Write(retEncoded)
 	} else {
 		http.Error(w, "400 paramters are incorrect", http.StatusBadRequest)
