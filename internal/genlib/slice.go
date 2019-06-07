@@ -1,4 +1,4 @@
-package slicelib
+package genlibinternal
 
 import (
 	"errors"

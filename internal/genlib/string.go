@@ -1,8 +1,4 @@
-package stringlib
-
-import (
-	slicelib "github.com/ryanchaiyakul/datagen/internal/slice"
-)
+package genlibinternal
 
 // GenString returns a list of string permutations that are valid to the asciiRange
 // if asciiRange blank, uses all lowercase and uppercase letters
@@ -23,7 +19,7 @@ func GenString(length int, asciiRange [2]int, permutationRange [2]int) ([]string
 
 	retList := []string{}
 
-	intList, err := slicelib.GenArray([]int{length}, validValues, permutationRange)
+	intList, err := GenArray([]int{length}, validValues, permutationRange)
 	if err == nil {
 		for k := range intList.([][]int) {
 			ret := ""

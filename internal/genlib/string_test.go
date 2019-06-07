@@ -1,4 +1,4 @@
-package stringlib
+package genlibinternal
 
 import (
 	"testing"

@@ -6,8 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	slicelib "github.com/ryanchaiyakul/datagen/internal/slice"
-	stringlib "github.com/ryanchaiyakul/datagen/internal/string"
+	genlibinternal "github.com/ryanchaiyakul/datagen/internal/genlib"
 )
 
 type arrayParams struct {
@@ -101,7 +100,7 @@ func getArray(w http.ResponseWriter, r *http.Request) interface{} {
 		http.Error(w, "400 missing dimensions.", http.StatusBadRequest)
 		return nil
 	}
-	slicelibRet, err := slicelib.GenArray(curParams.dimensions, curParams.validValues, curParams.permutationRange)
+	slicelibRet, err := genlibinternal.GenArray(curParams.dimensions, curParams.validValues, curParams.permutationRange)
 	if err == nil {
 		return slicelibRet
 	}
@@ -148,7 +147,7 @@ func getString(w http.ResponseWriter, r *http.Request) interface{} {
 		http.Error(w, "400 missing length.", http.StatusBadRequest)
 		return nil
 	}
-	stringlibRet, err := stringlib.GenString(curParams.length, curParams.asciiRange, curParams.permutationRange)
+	stringlibRet, err := genlibinternal.GenString(curParams.length, curParams.asciiRange, curParams.permutationRange)
 	if err == nil {
 		return stringlibRet
 	}
