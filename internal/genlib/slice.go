@@ -1,14 +1,16 @@
-package genlibinternal
+package genlib
 
 import (
 	"errors"
 	"math"
 	"sync"
+
+	helperlib "github.com/ryanchaiyakul/datagen/internal/helper"
 )
 
 // GenArray returns a 2D slice that contains all the permutations mapped to a single slice
 // if permutationRange is blank, returns all permutations
-func GenArray(dimensions []int, validValues []int, permutationRange [2]int) (interface{}, error) {
+func GenArray(dimensions []int, validValues [][]int, permutationRange [2]int) (interface{}, error) {
 	permutationChan := make(chan []int)
 
 	length := dimensions[0]
@@ -17,16 +19,17 @@ func GenArray(dimensions []int, validValues []int, permutationRange [2]int) (int
 			length *= v
 		}
 	}
-
+	if length != len(validValues) {
+		return nil, errors.New("Slicelib : mismatched validValues and dimensions")
+	}
 	if permutationRange[0] < 0 {
 		return nil, errors.New("Slicelib : permutation lower limit out of range")
 	}
-	if permutationCount := maxPermutations(dimensions, validValues); permutationRange[1] > permutationCount-1 {
-		return nil, errors.New("Slicelib : permutation lower limit out of range")
+	if permutationCount := helperlib.GetPermutationSliceUnique(dimensions, validValues); permutationRange[1] > permutationCount+1 {
+		return nil, errors.New("Slicelib : permutation higher limit out of range")
 	} else if permutationRange[0] == 0 && permutationRange[1] == 0 {
 		permutationRange[1] = permutationCount
 	}
-
 	permutationList := [][]int{}
 	go listPermutations(length, validValues, permutationChan, permutationRange)
 	for permutation := range permutationChan {
@@ -35,24 +38,10 @@ func GenArray(dimensions []int, validValues []int, permutationRange [2]int) (int
 	return permutationList, nil
 }
 
-func maxPermutations(dimensions []int, validValues []int) int {
-	ret := 0
-	if dimensionsLength := len(dimensions); dimensionsLength == 1 {
-		ret = int(math.Pow(float64(len(validValues)), float64(dimensions[0])))
-	} else {
-		ret = 1
-		for i := 0; i < dimensionsLength; i++ {
-			ret = ret * dimensions[i]
-		}
-		ret = int(math.Pow(float64(len(validValues)), float64(ret)))
-	}
-	return ret
-}
-
-func listPermutations(length int, validValues []int, results chan []int, permutationRange [2]int) {
+func listPermutations(length int, validValues [][]int, results chan []int, permutationRange [2]int) {
 	base := []int{}
-	for i := 0; i < length; i++ {
-		base = append(base, validValues[0])
+	for i := 0; i < len(validValues); i++ {
+		base = append(base, validValues[i][0])
 	}
 	switch permutationCount := permutationRange[1] - permutationRange[0]; {
 	case permutationCount < 100:
@@ -64,7 +53,7 @@ func listPermutations(length int, validValues []int, results chan []int, permuta
 	}
 }
 
-func listPermutationsHelper(base []int, validValues []int, permutationRange [2]int, results chan []int, routineCount int) {
+func listPermutationsHelper(base []int, validValues [][]int, permutationRange [2]int, results chan []int, routineCount int) {
 	sem := make(chan struct{}, routineCount)
 	var wg sync.WaitGroup
 
@@ -72,9 +61,9 @@ func listPermutationsHelper(base []int, validValues []int, permutationRange [2]i
 		wg.Add(1)
 		select {
 		case sem <- struct{}{}:
-			go incrementSingleWGSem(base, validValues, i, results, &wg, sem)
+			go incrementSingleWGSem(&base, &validValues, i, results, &wg, sem)
 		default:
-			incrementSingle(base, validValues, i, results)
+			incrementSingle(&base, &validValues, i, results)
 			wg.Done()
 		}
 	}
@@ -85,7 +74,7 @@ func listPermutationsHelper(base []int, validValues []int, permutationRange [2]i
 	}()
 }
 
-func listPermutationsHelperRange(base []int, validValues []int, permutationRange [2]int, results chan []int, routineCount int) {
+func listPermutationsHelperRange(base []int, validValues [][]int, permutationRange [2]int, results chan []int, routineCount int) {
 	sem := make(chan struct{}, routineCount)
 	var wg sync.WaitGroup
 
@@ -106,31 +95,31 @@ func listPermutationsHelperRange(base []int, validValues []int, permutationRange
 	}()
 }
 
-func incrementRangeWGSem(base []int, validValues []int, addendRange [2]int, results chan []int, wg *sync.WaitGroup, sem chan struct{}) {
+func incrementRangeWGSem(base []int, validValues [][]int, addendRange [2]int, results chan []int, wg *sync.WaitGroup, sem chan struct{}) {
 	defer func() {
 		<-sem
 		wg.Done()
 	}()
 
 	for i := addendRange[0]; i < addendRange[1]; i++ {
-		results <- incrementSingleRet(base, validValues, i)
+		results <- incrementSingleRet(&base, &validValues, i)
 	}
 }
 
-func incrementRange(base []int, validValues []int, addendRange [2]int, results chan []int) {
+func incrementRange(base []int, validValues [][]int, addendRange [2]int, results chan []int) {
 	for i := addendRange[0]; i < addendRange[1]; i++ {
-		results <- incrementSingleRet(base, validValues, i)
+		results <- incrementSingleRet(&base, &validValues, i)
 	}
 }
 
-func incrementSingle(base []int, validValues []int, addend int, results chan []int) {
+func incrementSingle(base *[]int, validValues *[][]int, addend int, results chan []int) {
 	// a copy is used because otherwise you would mutilate the base list
-	temp := append(base[:0:0], base...)
+	temp := append((*base)[:0:0], (*base)...)
 	for i := 0; i < len(temp); i++ {
-		temp[i] = validValues[int(math.Mod(float64(addend), float64(len(validValues))))]
+		temp[i] = (*validValues)[i][int(math.Mod(float64(addend), float64(len((*validValues)[i]))))]
 
 		// addend is used as carry over
-		addend = addend / len(validValues)
+		addend = addend / len((*validValues)[i])
 
 		if addend == 0 {
 			results <- temp
@@ -140,19 +129,19 @@ func incrementSingle(base []int, validValues []int, addend int, results chan []i
 	results <- nil
 }
 
-func incrementSingleWGSem(base []int, validValues []int, addend int, results chan []int, wg *sync.WaitGroup, sem chan struct{}) {
+func incrementSingleWGSem(base *[]int, validValues *[][]int, addend int, results chan []int, wg *sync.WaitGroup, sem chan struct{}) {
 	defer func() {
 		<-sem
 		wg.Done()
 	}()
 
 	// a copy is used because otherwise you would mutilate the base list
-	temp := append(base[:0:0], base...)
+	temp := append((*base)[:0:0], (*base)...)
 	for i := 0; i < len(temp); i++ {
-		temp[i] = validValues[int(math.Mod(float64(addend), float64(len(validValues))))]
+		temp[i] = (*validValues)[i][int(math.Mod(float64(addend), float64(len((*validValues)[i]))))]
 
 		// addend is used as carry over
-		addend = addend / len(validValues)
+		addend = addend / len((*validValues)[i])
 
 		if addend == 0 {
 			results <- temp
@@ -162,14 +151,14 @@ func incrementSingleWGSem(base []int, validValues []int, addend int, results cha
 	results <- nil
 }
 
-func incrementSingleRet(base []int, validValues []int, addend int) []int {
+func incrementSingleRet(base *[]int, validValues *[][]int, addend int) []int {
 	// a copy is used because otherwise you would mutilate the base list
-	temp := append(base[:0:0], base...)
+	temp := append((*base)[:0:0], (*base)...)
 	for i := 0; i < len(temp); i++ {
-		temp[i] = validValues[int(math.Mod(float64(addend), float64(len(validValues))))]
+		temp[i] = (*validValues)[i][int(math.Mod(float64(addend), float64(len((*validValues)[i]))))]
 
 		// addend is used as carry over
-		addend = addend / len(validValues)
+		addend = addend / len((*validValues)[i])
 
 		if addend == 0 {
 			return temp

@@ -3,12 +3,12 @@ package main
 import (
 	"net/http"
 
-	httpapilib "github.com/ryanchaiyakul/datagen/internal/http"
+	cmdlib "github.com/ryanchaiyakul/datagen/internal/cmd"
 )
 
 func main() {
-	http.HandleFunc("/", httpapilib.Handler)
-	if err := http.ListenAndServe(":80", nil); err != nil {
+	http.HandleFunc("/", cmdlib.Handler)
+	if err := http.ListenAndServe(":8080", nil); err != nil {
 		return
 	}
 }

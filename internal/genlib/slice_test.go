@@ -1,7 +1,9 @@
-package genlibinternal
+package genlib
 
 import (
 	"testing"
+
+	helperlib "github.com/ryanchaiyakul/datagen/internal/helper"
 )
 
 func TestGenArray(t *testing.T) {
@@ -18,12 +20,16 @@ func TestGenArray(t *testing.T) {
 	}{
 		{"2x2", args{[]int{2, 2}, []int{0, 1}, [2]int{0, 2}}, 2, false},
 		{"2x2 Fail", args{[]int{2, 2}, []int{0, 1}, [2]int{0, 100}}, 2, true},
-		{"10x10", args{[]int{10, 10}, []int{0, 1}, [2]int{0, 100}}, 100, false},
-		{"100x100", args{[]int{100, 100}, []int{0, 1, 2}, [2]int{100, 1000}}, 900, false},
+		//{"10x10", args{[]int{10, 10}, []int{0, 1}, [2]int{0, 100}}, 100, false},
+		//{"100x100", args{[]int{100, 100}, []int{0, 1, 2}, [2]int{100, 1000}}, 900, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GenArray(tt.args.dimensions, tt.args.validValues, tt.args.permutationRange)
+			validValues := [][]int{}
+			for i := 0; i < len(helperlib.FlatSlice(tt.args.dimensions, tt.args.validValues[0])); i++ {
+				validValues = append(validValues, tt.args.validValues)
+			}
+			got, err := GenArray(tt.args.dimensions, validValues, tt.args.permutationRange)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenArray() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -1,25 +1,10 @@
-package genlibinternal
+package genlib
 
 // GenString returns a list of string permutations that are valid to the asciiRange
 // if asciiRange blank, uses all lowercase and uppercase letters
-func GenString(length int, asciiRange [2]int, permutationRange [2]int) ([]string, error) {
-	validValues := []int{}
-	if asciiRange[0] == 0 && asciiRange[1] == 0 {
-		for i := 65; i < 91; i++ {
-			validValues = append(validValues, i)
-		}
-		for i := 97; i < 123; i++ {
-			validValues = append(validValues, i)
-		}
-	} else {
-		for i := asciiRange[0]; i < asciiRange[1]+1; i++ {
-			validValues = append(validValues, i)
-		}
-	}
-
+func GenString(length int, asciiValues [][]int, permutationRange [2]int) ([]string, error) {
 	retList := []string{}
-
-	intList, err := GenArray([]int{length}, validValues, permutationRange)
+	intList, err := GenArray([]int{length}, asciiValues, permutationRange)
 	if err == nil {
 		for k := range intList.([][]int) {
 			ret := ""
