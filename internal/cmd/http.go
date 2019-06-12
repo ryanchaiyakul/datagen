@@ -149,7 +149,7 @@ func getSlice(w http.ResponseWriter, r *http.Request) interface{} {
 			}
 			curParams.validValues = append(curParams.validValues, temp)
 		}
-	} else if validValuesRange[0] != 0 && validValuesRange[1] != 0 {
+	} else if validValuesRange[0] != 0 || validValuesRange[1] != 0 {
 		tempSlice := []int{}
 		for i := validValuesRange[0]; i < validValuesRange[1]; i++ {
 			tempSlice = append(tempSlice, i)
@@ -264,7 +264,7 @@ func getString(w http.ResponseWriter, r *http.Request) interface{} {
 			}
 			curParams.asciiValues = append(curParams.asciiValues, temp)
 		}
-	} else if asciiValuesRange[0] != 0 && asciiValuesRange[1] != 0 {
+	} else if asciiValuesRange[0] != 0 || asciiValuesRange[1] != 0 {
 		tempSlice := []int{}
 		for i := asciiValuesRange[0]; i < asciiValuesRange[1]; i++ {
 			tempSlice = append(tempSlice, i)
