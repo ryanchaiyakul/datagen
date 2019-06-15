@@ -29,7 +29,7 @@ Key:
 
 #### validValues
 
-1. **valid_values_range** : A 2 long array that contains the bounds of the validValues. This will apply to all indexs like valid_values_unanimous but less customizable because you can only submeit a single range.
+1. **valid_values_range** : A 2 long array that contains the bounds of the validValues(inclusive). This will apply to all indexs like valid_values_unanimous but less customizable because you can only submeit a single range.
 2. **valid_values_unanimous** : Duplicates the given validValues so that each index will have the same validValues
 3. *validValuesUnique* : For every index in the requested slice, there must be a one dimensional slice serving as its *validValues*
 
@@ -58,30 +58,30 @@ localhost:8080?funcid=slice&dimensions=2,2&valid_values=0,2,1,2,3,5,4,3,2,0&vali
 
 - **length** : An integer equal to the length of the string requested
 - **permutation_range** : Acts the same as *permutaiton_range* as a slice pararmter
-- *asciiValues* : The *validValues* of a string. If the asciiValues for a character equals -1, the all lowercase and uppercase letters will be used instead.
+- *stringValues* : The *validValues* of a string.
 
-#### asciiValues
+#### stringValues
 
 ascii_values follows the same idea as valid_values, but the resulting slice is converted to a string.
 
-1. **ascii_values_unanimous**
-2. *ascii_values_unique*
+1. **string_values_unanimous**
+2. *string_values_unique*
 
-##### asciiValuesUnique
+##### stringValuesUnique
 
-1. **ascii_values**
-2. **ascii_values_index**
+1. **string_values**
+2. **string_values_index**
 
 #### String Examples
 
 ``` Bash
 
 # using ascii_values_unanimous
-localhost:8080?funcid=string&length=2&ascii_values_unanimous=-1
+localhost:8080?funcid=string&length=2&string_values_unanimous=a,b
 
 # using ascii_values_unique
-localhost:8080?funcid=sring&length=2&ascii_values=-1,-1&ascii_values_index=1,1
+localhost:8080?funcid=sring&length=2&string_values=a,b&string_values_index=1,1
 
 # using ascii_values_unique for control
-localhost:8080?funcid=string&length=2ascii_values=-1,53,54&ascii_values_index=1,2
+localhost:8080?funcid=string&length=2&string_values=a,a,b&string_values_index=1,2
 ```

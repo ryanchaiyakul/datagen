@@ -18,7 +18,7 @@ type arrayParams struct {
 
 type stringParams struct {
 	length           int
-	asciiValues      [][]int
+	stringValues     [][]string
 	permutationRange [2]int
 }
 
@@ -123,7 +123,7 @@ func getSlice(w http.ResponseWriter, r *http.Request) interface{} {
 			}
 		default:
 			if k != "funcid" {
-				http.Error(w, "400 unknown parameter.", http.StatusBadRequest)
+				http.Error(w, "400 unknown funcid.", http.StatusBadRequest)
 				return nil
 			}
 		}
@@ -151,7 +151,7 @@ func getSlice(w http.ResponseWriter, r *http.Request) interface{} {
 		}
 	} else if validValuesRange[0] != 0 || validValuesRange[1] != 0 {
 		tempSlice := []int{}
-		for i := validValuesRange[0]; i < validValuesRange[1]; i++ {
+		for i := validValuesRange[0]; i < validValuesRange[1]+1; i++ {
 			tempSlice = append(tempSlice, i)
 		}
 		for i := 0; i < len(helperlib.FlatSlice(curParams.dimensions, 0)); i++ {
@@ -172,13 +172,12 @@ func getSlice(w http.ResponseWriter, r *http.Request) interface{} {
 
 func getString(w http.ResponseWriter, r *http.Request) interface{} {
 	// initialize config variables
-	curParams := stringParams{0, [][]int{}, [2]int{}}
+	curParams := stringParams{0, [][]string{}, [2]int{}}
 
-	// different asciiValues Configuration
-	asciiValuesUnanimous := []int{}
-	asciiValues := []int{}
-	asciiValuesIndex := []int{}
-	asciiValuesRange := [2]int{}
+	// different stringValues Configuration
+	stringValuesUnanimous := []string{}
+	stringValues := []string{}
+	stringValuesIndex := []int{}
 
 	for k, v := range r.URL.Query() {
 		switch k {
@@ -190,53 +189,33 @@ func getString(w http.ResponseWriter, r *http.Request) interface{} {
 			}
 			curParams.length = intLength
 
-		// Different ways to configure asciiValues
+		// Different ways to configure stringValues
 
 		// Unique configuration
-		case "ascii_values":
-			strList := strings.Split(v[0], ",")
-			intList := []int{}
-			for _, v := range strList {
-				if intV, err := strconv.Atoi(v); err == nil {
-					intList = append(intList, intV)
-				}
-			}
-			asciiValues = intList
-		case "ascii_values_index":
+		case "string_values":
+			stringValues = strings.Split(v[0], ",")
+
+		case "string_values_index":
 			strList := strings.Split(v[0], ",")
 			for _, v := range strList {
 				if intV, err := strconv.Atoi(v); err == nil {
-					asciiValuesIndex = append(asciiValuesIndex, intV)
+					stringValuesIndex = append(stringValuesIndex, intV)
 				}
 			}
 
 		// Config duplicated to all characters in the string
-		case "ascii_values_unanimous":
-			strList := strings.Split(v[0], ",")
-			for _, v := range strList {
-				if intV, err := strconv.Atoi(v); err == nil {
-					asciiValuesUnanimous = append(asciiValuesUnanimous, intV)
-				}
-			}
-
-		// 2 long int array representing the bounds for asciiValues
-		case "ascii_values_range":
-			strList := strings.Split(v[0], ",")
-			for k, v := range strList {
-				if intV, err := strconv.Atoi(v); err == nil {
-					asciiValuesRange[k] = intV
-				}
-			}
+		case "string_values_unanimous":
+			stringValuesUnanimous = strings.Split(v[0], ",")
 
 		case "permutation_range":
 			strList := strings.Split(v[0], ",")
-			intList := [2]int{}
-			for k, v := range strList {
-				if intV, err := strconv.Atoi(v); err == nil {
-					intList[k] = intV
+			if len(strList) == 2 {
+				for k, v := range strList {
+					if intV, err := strconv.Atoi(v); err == nil {
+						curParams.permutationRange[k] = intV
+					}
 				}
 			}
-			curParams.permutationRange = intList
 		default:
 			if k != "funcid" {
 				http.Error(w, "400 unknown parameter.", http.StatusBadRequest)
@@ -249,36 +228,28 @@ func getString(w http.ResponseWriter, r *http.Request) interface{} {
 		return nil
 	}
 
-	// asciiValues configuration
-	if len(asciiValuesUnanimous) != 0 {
+	// stringValues configuration
+	if len(stringValuesUnanimous) != 0 {
 		for i := 0; i < len(helperlib.FlatSlice([]int{curParams.length}, 0)); i++ {
-			curParams.asciiValues = append(curParams.asciiValues, asciiValuesUnanimous)
+			curParams.stringValues = append(curParams.stringValues, stringValuesUnanimous)
 		}
-	} else if len(asciiValues) != 0 && len(asciiValuesIndex) != 0 {
+	} else if len(stringValues) != 0 && len(stringValuesIndex) != 0 {
 		tempVal := 0
-		for i := 0; i < len(asciiValuesIndex); i++ {
-			temp := []int{}
-			for j := 0; j < asciiValuesIndex[i]; j++ {
-				temp = append(temp, asciiValues[tempVal])
+		for i := 0; i < len(stringValuesIndex); i++ {
+			tempSlice := []string{}
+			for j := 0; j < stringValuesIndex[i]; j++ {
+				tempSlice = append(tempSlice, stringValues[tempVal])
 				tempVal++
 			}
-			curParams.asciiValues = append(curParams.asciiValues, temp)
-		}
-	} else if asciiValuesRange[0] != 0 || asciiValuesRange[1] != 0 {
-		tempSlice := []int{}
-		for i := asciiValuesRange[0]; i < asciiValuesRange[1]; i++ {
-			tempSlice = append(tempSlice, i)
-		}
-		for i := 0; i < len(helperlib.FlatSlice([]int{curParams.length}, 0)); i++ {
-			curParams.asciiValues = append(curParams.asciiValues, tempSlice)
+			curParams.stringValues = append(curParams.stringValues, tempSlice)
 		}
 	} else {
-		http.Error(w, "400 asciiValues not properly passed", http.StatusBadRequest)
+		http.Error(w, "400 stringValues not properly passed", http.StatusBadRequest)
 		return nil
 	}
 
 	// gets string(s) and returns them to Handler
-	stringlibRet, err := genlib.GenString(curParams.length, curParams.asciiValues, curParams.permutationRange)
+	stringlibRet, err := genlib.GenString(curParams.length, curParams.stringValues, curParams.permutationRange)
 	if err == nil {
 		return stringlibRet
 	}

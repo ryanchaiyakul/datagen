@@ -20,10 +20,10 @@ func GenArray(dimensions []int, validValues [][]int, permutationRange [2]int) (i
 		}
 	}
 	if length != len(validValues) {
-		return nil, errors.New("Slicelib : mismatched validValues and dimensions")
+		return nil, errors.New("GenSlice : mismatched validValues and dimensions")
 	}
 	if permutationRange[0] < 0 {
-		return nil, errors.New("Slicelib : permutation lower limit out of range")
+		return nil, errors.New("GenSlice : permutation lower limit out of range")
 	}
 	if permutationCount := helperlib.GetPermutationSliceUnique(dimensions, validValues); permutationRange[1] > permutationCount+1 {
 		return nil, errors.New("Slicelib : permutation higher limit out of range")
