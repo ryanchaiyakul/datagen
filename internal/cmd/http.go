@@ -2,6 +2,8 @@ package cmdlib
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -39,26 +41,27 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	if funcid, ok := r.URL.Query()["funcid"]; ok {
 		switch funcid[0] {
 		case "slice":
-			ret = getSlice(w, r)
+			ret = getSlice(r)
 		case "string":
-			ret = getString(w, r)
+			ret = getString(r)
 		default:
-			http.Error(w, "400 incorrect funcid", http.StatusBadRequest)
-			return
+			ret = errors.New("Handler : unknown funcid")
 		}
 	} else {
-		http.Error(w, "400 funcid not passed", http.StatusBadRequest)
-		return
+		ret = errors.New("Handler : funcid not passed")
 	}
 
-	if retEncoded, err := json.Marshal(ret); err == nil && retEncoded != nil {
+	switch ret.(type) {
+	case error:
+		w.Write([]byte(fmt.Sprint(ret)))
+		return
+	}
+	if retEncoded, err := json.Marshal(ret); err == nil {
 		w.Write(retEncoded)
-	} else {
-		http.Error(w, "400 paramters are incorrect", http.StatusBadRequest)
 	}
 }
 
-func getSlice(w http.ResponseWriter, r *http.Request) interface{} {
+func getSlice(r *http.Request) interface{} {
 	// initialize config variables
 	curParams := arrayParams{nil, nil, [2]int{0, 0}}
 
@@ -123,20 +126,18 @@ func getSlice(w http.ResponseWriter, r *http.Request) interface{} {
 			}
 		default:
 			if k != "funcid" {
-				http.Error(w, "400 unknown funcid.", http.StatusBadRequest)
-				return nil
+				return errors.New("GetSlice : unknown parameter")
 			}
 		}
 	}
 
 	if curParams.dimensions == nil {
-		http.Error(w, "400 missing dimensions.", http.StatusBadRequest)
-		return nil
+		return errors.New("GetSlice : missing dimensions")
 	}
 
 	// validValue configuration
 	if len(validValuesUnanimous) != 0 {
-		for i := 0; i < len(helperlib.FlatSlice(curParams.dimensions, 0)); i++ {
+		for i := 0; i < helperlib.FlatSliceLength(curParams.dimensions); i++ {
 			curParams.validValues = append(curParams.validValues, validValuesUnanimous)
 		}
 	} else if len(validValues) != 0 && len(validValuesIndex) != 0 {
@@ -154,23 +155,22 @@ func getSlice(w http.ResponseWriter, r *http.Request) interface{} {
 		for i := validValuesRange[0]; i < validValuesRange[1]+1; i++ {
 			tempSlice = append(tempSlice, i)
 		}
-		for i := 0; i < len(helperlib.FlatSlice(curParams.dimensions, 0)); i++ {
+		for i := 0; i < helperlib.FlatSliceLength(curParams.dimensions); i++ {
 			curParams.validValues = append(curParams.validValues, tempSlice)
 		}
 	} else {
-		http.Error(w, "400 validValues not properly passed", http.StatusBadRequest)
-		return nil
+		return errors.New("GetSlice : missing validValues")
 	}
 
 	// gets slice(s) and returns it back to Handler
-	slicelibRet, err := genlib.GenArray(curParams.dimensions, curParams.validValues, curParams.permutationRange)
+	sliceRet, err := genlib.GenArray(curParams.dimensions, curParams.validValues, curParams.permutationRange)
 	if err == nil {
-		return slicelibRet
+		return sliceRet
 	}
-	return nil
+	return err
 }
 
-func getString(w http.ResponseWriter, r *http.Request) interface{} {
+func getString(r *http.Request) interface{} {
 	// initialize config variables
 	curParams := stringParams{0, [][]string{}, [2]int{}}
 
@@ -184,8 +184,7 @@ func getString(w http.ResponseWriter, r *http.Request) interface{} {
 		case "length":
 			intLength, err := strconv.Atoi(string(v[0][0]))
 			if err != nil {
-				http.Error(w, "400 can not convert length to a string.", http.StatusBadRequest)
-				return nil
+				return errors.New("GetString : strconv failed when called on length")
 			}
 			curParams.length = intLength
 
@@ -218,19 +217,17 @@ func getString(w http.ResponseWriter, r *http.Request) interface{} {
 			}
 		default:
 			if k != "funcid" {
-				http.Error(w, "400 unknown parameter.", http.StatusBadRequest)
-				return nil
+				return errors.New("GetString : unknown paramter")
 			}
 		}
 	}
 	if curParams.length == 0 {
-		http.Error(w, "400 missing length.", http.StatusBadRequest)
-		return nil
+		return errors.New("GetString : missing length")
 	}
 
 	// stringValues configuration
 	if len(stringValuesUnanimous) != 0 {
-		for i := 0; i < len(helperlib.FlatSlice([]int{curParams.length}, 0)); i++ {
+		for i := 0; i < helperlib.FlatSliceLength([]int{curParams.length}); i++ {
 			curParams.stringValues = append(curParams.stringValues, stringValuesUnanimous)
 		}
 	} else if len(stringValues) != 0 && len(stringValuesIndex) != 0 {
@@ -244,14 +241,13 @@ func getString(w http.ResponseWriter, r *http.Request) interface{} {
 			curParams.stringValues = append(curParams.stringValues, tempSlice)
 		}
 	} else {
-		http.Error(w, "400 stringValues not properly passed", http.StatusBadRequest)
-		return nil
+		return errors.New("GetString : missing stringValues")
 	}
 
 	// gets string(s) and returns them to Handler
-	stringlibRet, err := genlib.GenString(curParams.length, curParams.stringValues, curParams.permutationRange)
+	stringRet, err := genlib.GenString(curParams.length, curParams.stringValues, curParams.permutationRange)
 	if err == nil {
-		return stringlibRet
+		return stringRet
 	}
-	return nil
+	return err
 }

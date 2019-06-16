@@ -1,6 +1,8 @@
 package helperlib
 
-import "math"
+import (
+	"math"
+)
 
 // GetPermutationSliceUnique returns the number of permutations that exist for a certain 1D slice
 // validValues is [][]int
@@ -26,12 +28,12 @@ func GetPermutationSliceUnanimous(dimensions []int, validValues []int) int {
 	return ret
 }
 
-// FlatSlice returns the multidimensional slice flattened into a single dimensional slice
-func FlatSlice(dimensions []int, value int) []int {
-	ret := []int{}
-	for i := 0; i < len(dimensions); i++ {
-		for j := 0; j < dimensions[i]; j++ {
-			ret = append(ret, value)
+// FlatSliceLength returns the multidimensional slice flattened into a single dimensional slice
+func FlatSliceLength(dimensions []int) int {
+	ret := dimensions[0]
+	if len(dimensions) > 1 {
+		for _, v := range dimensions[1:] {
+			ret *= v
 		}
 	}
 	return ret

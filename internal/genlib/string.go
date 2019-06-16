@@ -29,7 +29,7 @@ func GenString(length int, stringValues [][]string, permutationRange [2]int) ([]
 			}
 			retList = append(retList, ret)
 		}
-		return retList, err
+		return retList, nil
 	}
 	return nil, err
 }

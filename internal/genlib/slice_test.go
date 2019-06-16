@@ -26,7 +26,7 @@ func TestGenArray(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validValues := [][]int{}
-			for i := 0; i < len(helperlib.FlatSlice(tt.args.dimensions, tt.args.validValues[0])); i++ {
+			for i := 0; i < helperlib.FlatSliceLength(tt.args.dimensions); i++ {
 				validValues = append(validValues, tt.args.validValues)
 			}
 			got, err := GenArray(tt.args.dimensions, validValues, tt.args.permutationRange)
