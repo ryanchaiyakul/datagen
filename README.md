@@ -12,76 +12,48 @@ go run datagen/cmd/httpapi/main.go
 
 ## HTTP API
 
-Key:
+### Key Parameters
 
-- **Bold** : A parameter that is necessary to pass in.
-- *Italic* : A paramter that is passed in by different means.
+- **key** : 1D string slice that contains the keys of the requested data types
+- **permutation_range** : 2 long int array that contains the lower and upper bounds of the permutations returned (lower : inclusive, upper : exclusive)
 
-### General Parameters
+### Int Slice Parameters
 
-- **funcid** : Determines the data type that will be returned. Each funcid has different paramters.
-
-### Slice Parameters
-
-- **dimensions** : A one dimensional slice that contains the lengths of each dimension.
-- *permutation_range* : A 2 long array that contains the bounds of the permutations requested. When using the same configuration, two different calls will output the same permutations but possibly in different order. Reccomended to be used when working with large slices or when parallelizing the workflow.
-- *validValues* : A two dimensional slice containing the possible values according to each index in the dimensions. The length of validValues should equal the length of the flattened slice requested.
-
-#### validValues
-
-1. **valid_values_range** : A 2 long array that contains the bounds of the validValues(inclusive). This will apply to all indexs like valid_values_unanimous but less customizable because you can only submeit a single range.
-2. **valid_values_unanimous** : Duplicates the given validValues so that each index will have the same validValues
-3. *validValuesUnique* : For every index in the requested slice, there must be a one dimensional slice serving as its *validValues*
-
-##### validValuesUnique
-
-- **valid_values** : Contains all the actually information that forms the 2D ValidValues slice
+- **dimensions** : 1D int slice that contains the lengths of each dimension
+- **valid_values** : 1D int slice that contains all the information that forms the 2D ValidValues slice
 - **valid_values_index** : Determines how to generate the 2D slice from valid_values. The length of *valid_values_index* should equal the length of the flattened slice requested.
 
-#### Slice Examples
+### Int Parameters
 
-``` Bash
-# using valid_values_range
-localhost:8080?funcid=slice&dimensions=2,2&valid_values_range=0,2
+- **valid_values** : 1D int slice that contains the possible values of the integer
 
-# using valid_values_unanimous
-localhost:8080?funcid=slice&dimensions=2,2&valid_values_unanimous=0,1,2
+### String Slice Parameters
 
-# using valid_values_unique
-localhost:8080?funcid=slice&dimensions=2,2&valid_values=0,1,2,0,1,2,0,1,2,0,1,2&valid_values_index=3,3,3,3
-
-# using valid_values_unique for control
-localhost:8080?funcid=slice&dimensions=2,2&valid_values=0,2,1,2,3,5,4,3,2,0&valid_values_index=1,2,3,4
-```
+- **dimensions** : 1D int slice that contains the lengths of each dimension
+- **lengths** : 1D int slice that contains the length of each string in the requested slice
+- **string_values** : The same as *valid_values* but contains strings instead of integers
+- **string_values_index** : The sae as *valid_values_index* as a slice parameter
 
 ### String Parameters
 
 - **length** : An integer equal to the length of the string requested
-- **permutation_range** : Acts the same as *permutaiton_range* as a slice pararmter
-- *stringValues* : The *validValues* of a string.
+- **string_values** : The same as *valid_values* but contains strings instead of integers
+- **string_values_index** : The sae as *valid_values_index* as a slice parameter
 
-#### stringValues
+### Complex Slice Parameters
 
-ascii_values follows the same idea as valid_values, but the resulting slice is converted to a string.
+- **dimensions** : 1D int slice that contains the lengths of each dimension
+- **real_values** : The *valid_values* of the real number
+- **imaginary_values** : The *valid_values* of the imaginary number
+  
+### Complex Parameters
 
-1. **string_values_unanimous**
-2. *string_values_unique*
+- **real_values** : The *valid_values* of the real number
+- **imaginary_values** : The *valid_values* of the imaginary number
 
-##### stringValuesUnique
+#### Examples
 
-1. **string_values**
-2. **string_values_index**
-
-#### String Examples
-
-``` Bash
-
-# using ascii_values_unanimous
-localhost:8080?funcid=string&length=2&string_values_unanimous=a,b
-
-# using ascii_values_unique
-localhost:8080?funcid=sring&length=2&string_values=a,b&string_values_index=1,1
-
-# using ascii_values_unique for control
-localhost:8080?funcid=string&length=2&string_values=a,a,b&string_values_index=1,2
+``` bash
+# complex slice and 2D int slice
+http://localhost:8080/?funcid=data&key=test,hello&test_type=complex_slice&test_dimensions=2&test_valid_values_index=2,2&test_real_values=0,1,0,2&test_imaginary_values=1,2,3,4&hello_type=int_slice&hello_dimensions=2,2&hello_valid_values=0,1,0,1,0,1,0,1&hello_valid_values_index=2,2,2,2
 ```
