@@ -49,7 +49,6 @@ func GenInt(config IntParams) ([]int, error) {
 // GenIntSlice returns a 2D slice that contains all the permutations mapped to a single slice
 // if permutationRange is blank, returns all permutations
 func GenIntSlice(sliceConfig IntSliceParams) ([][]int, error) {
-	// parameter checking
 	if len(sliceConfig.Dimensions) == 0 {
 		return nil, errors.New("GenSlice : missing dimensions")
 	}
@@ -78,36 +77,36 @@ func GenIntSlice(sliceConfig IntSliceParams) ([][]int, error) {
 		}
 	}
 
-	// initialize variables
-	permutationList := [][]int{}
-	permutationChan := make(chan []int)
+	routineCount := 0
+	bufferCount := 0
+	switch {
+	case permutationCount < 100:
+		routineCount = 10
+		bufferCount = 5
+	case permutationCount < 100:
+		routineCount = 50
+		bufferCount = 10
+	default:
+		routineCount = 100
+		bufferCount = 20
+	}
 
-	go listPermutations(length, sliceConfig.ValidValues, permutationChan, sliceConfig.Permutations)
+	permutationList := [][]int{}
+	permutationChan := make(chan []int, bufferCount)
+
+	base := []int{}
+	for i := 0; i < len(sliceConfig.ValidValues); i++ {
+		base = append(base, sliceConfig.ValidValues[i][0])
+	}
+
+	go genIntSliceHelper(&base, &sliceConfig.ValidValues, &sliceConfig.Permutations, permutationChan, routineCount)
 	for permutation := range permutationChan {
 		permutationList = append(permutationList, permutation)
 	}
 	return permutationList, nil
 }
 
-func listPermutations(length int, validValues [][]int, results chan []int, permutations []int) {
-	// generate base slice
-	base := []int{}
-	for i := 0; i < len(validValues); i++ {
-		base = append(base, validValues[i][0])
-	}
-
-	// call helper functions
-	switch permutationCount := len(permutations); {
-	case permutationCount < 100:
-		go listPermutationsHelper(&base, &validValues, &permutations, results, 10)
-	case permutationCount < 1000:
-		go listPermutationsHelper(&base, &validValues, &permutations, results, 50)
-	default:
-		go listPermutationsHelper(&base, &validValues, &permutations, results, 100)
-	}
-}
-
-func listPermutationsHelper(base *[]int, validValues *[][]int, permutations *[]int, results chan []int, routineCount int) {
+func genIntSliceHelper(base *[]int, validValues *[][]int, permutations *[]int, results chan []int, routineCount int) {
 	sem := semaphore.NewWeighted(int64(routineCount))
 	var wg sync.WaitGroup
 
@@ -121,7 +120,6 @@ func listPermutationsHelper(base *[]int, validValues *[][]int, permutations *[]i
 		}
 	}
 
-	// to close the channel after all the workers are done
 	go func() {
 		wg.Wait()
 		close(results)
@@ -129,12 +127,10 @@ func listPermutationsHelper(base *[]int, validValues *[][]int, permutations *[]i
 }
 
 func incrementSingle(base *[]int, validValues *[][]int, addend int, results chan []int) {
-	// a copy is used because otherwise you would mutilate the base list
 	temp := append((*base)[:0:0], (*base)...)
 	for i := 0; i < len(temp); i++ {
 		temp[i] = (*validValues)[i][int(math.Mod(float64(addend), float64(len((*validValues)[i]))))]
 
-		// addend is used as carry over
 		addend = addend / len((*validValues)[i])
 
 		if addend == 0 {

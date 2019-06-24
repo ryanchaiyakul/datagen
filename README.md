@@ -55,5 +55,8 @@ go run datagen/cmd/httpapi/main.go
 
 ``` bash
 # complex slice and 2D int slice
-http://localhost:8080/?funcid=data&key=test,hello&test_type=complex_slice&test_dimensions=2&test_valid_values_index=2,2&test_real_values=0,1,0,2&test_imaginary_values=1,2,3,4&hello_type=int_slice&hello_dimensions=2,2&hello_valid_values=0,1,0,1,0,1,0,1&hello_valid_values_index=2,2,2,2
+http://localhost:8080/?key=c_slice,i_slice&c_slice_type=complex_slice&c_slice_dimensions=2&c_slice_valid_values_index=2,2&c_slice_real_values=0,1,0,2&c_slice_imaginary_values=1,2,3,4&i_slice_type=int_slice&i_slice_dimensions=2,2&i_slice_valid_values=0,1,0,1,0,1,0,1&i_slice_valid_values_index=2,2,2,2
+
+# string slice and string
+http://localhost:8080/?key=s_slice,str&s_slice_type=string_slice&s_slice_dimensions=2,2&s_slice_lengths=1,2,1,2&s_slice_string_values=a,b,a,b,c,a,b,a,b,c,a,b,a,b,c,a,b,a,b,c,a,b&s_slice_string_values_index=2,3,2,3,2,3,2,3,2&str_type=string&str_length=4&str_string_values=a,b,c,a,b,c,d,a,b,a&str_string_values_index=3,4,2,1
 ```

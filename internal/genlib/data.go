@@ -19,25 +19,27 @@ type DataParams struct {
 // GenData generates a 1D map of the requested data types
 func GenData(config []*DataParams, permutationRange [2]int) ([]map[string]interface{}, error) {
 	var ret []map[string]interface{}
-	results := make(chan map[string]interface{})
 
 	if permutationRange[0] == 0 && permutationRange[1] == 0 {
 		permutationRange[1] = getPermutationData(config)
 	}
 
-	var err error
+	routineCount := 0
+	bufferCount := 0
 	switch permutaitonCount := permutationRange[1] - permutationRange[0]; {
 	case permutaitonCount < 100:
-		err = genDataHelper(config, permutationRange, results, 10)
+		routineCount = 10
+		bufferCount = 5
 	case permutaitonCount < 100:
-		err = genDataHelper(config, permutationRange, results, 50)
+		routineCount = 50
+		bufferCount = 10
 	default:
-		err = genDataHelper(config, permutationRange, results, 100)
+		routineCount = 100
+		bufferCount = 20
 	}
 
-	if err != nil {
-		return nil, err
-	}
+	results := make(chan map[string]interface{}, bufferCount)
+	go genDataHelper(config, permutationRange, results, routineCount)
 
 	for permutation := range results {
 		if err, ok := permutation["error"]; ok {
@@ -48,18 +50,17 @@ func GenData(config []*DataParams, permutationRange [2]int) ([]map[string]interf
 	return ret, nil
 }
 
-func genDataHelper(config []*DataParams, permutationRange [2]int, results chan map[string]interface{}, routineCount int) error {
+func genDataHelper(config []*DataParams, permutationRange [2]int, results chan map[string]interface{}, routineCount int) {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, routineCount)
-
+	wg.Add(permutationRange[1] - permutationRange[0])
 	for i := permutationRange[0]; i < permutationRange[1]; i++ {
 		tempConfig := configCopy(config)
 		if err := setPermutation(tempConfig, i); err == nil {
-			wg.Add(1)
 			sem <- struct{}{}
 			go genDataMain(tempConfig, &wg, sem, results)
 		} else {
-			return err
+			results <- map[string]interface{}{"error": err}
 		}
 	}
 
@@ -67,8 +68,6 @@ func genDataHelper(config []*DataParams, permutationRange [2]int, results chan m
 		wg.Wait()
 		close(results)
 	}()
-
-	return nil
 }
 
 func genDataMain(config []*DataParams, wg *sync.WaitGroup, sem chan struct{}, results chan map[string]interface{}) {
@@ -143,7 +142,6 @@ func genDataMain(config []*DataParams, wg *sync.WaitGroup, sem chan struct{}, re
 		}
 		ret[v.Name] = retVal
 	}
-	fmt.Println(ret)
 	results <- ret
 }
 
@@ -169,7 +167,7 @@ func setPermutation(config []*DataParams, permutation int) error {
 				complexConfig := v.GenConfig.(*ComplexParams)
 				complexConfig.Permutations = []int{0}
 			case "string_slice":
-				sliceConfig := v.GenConfig.(*StringParams)
+				sliceConfig := v.GenConfig.(*StringSliceParams)
 				sliceConfig.Permutations = []int{0}
 			case "string":
 				stringConfig := v.GenConfig.(*StringParams)
@@ -255,16 +253,16 @@ func getPermutationData(config []*DataParams) int {
 			permutationCount *= len(intConfig.ValidValues)
 		case "complex_slice":
 			sliceConfig := v.GenConfig.(*ComplexSliceParams)
-			permutationCount = helperlib.GetPermutationComplexSlice(sliceConfig.ValidValues)
+			permutationCount *= helperlib.GetPermutationComplexSlice(sliceConfig.ValidValues)
 		case "complex":
 			complexConfig := v.GenConfig.(*ComplexParams)
-			permutationCount = len(complexConfig.ValidValues)
+			permutationCount *= len(complexConfig.ValidValues)
 		case "string_slice":
 			sliceConfig := v.GenConfig.(*StringSliceParams)
-			permutationCount = helperlib.GetPermutationString(sliceConfig.StringValues)
+			permutationCount *= helperlib.GetPermutationString(sliceConfig.StringValues)
 		case "string":
 			stringConfig := v.GenConfig.(*StringParams)
-			permutationCount = helperlib.GetPermutationString(stringConfig.StringValues)
+			permutationCount *= helperlib.GetPermutationString(stringConfig.StringValues)
 		}
 	}
 	return permutationCount
