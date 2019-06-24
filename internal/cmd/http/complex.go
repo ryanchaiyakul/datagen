@@ -43,7 +43,7 @@ func getComplexSliceParam(k string, v []string, curParams *genlib.ComplexSlicePa
 			return fmt.Errorf("getComplexParam : unknown parameter : %v", k)
 		}
 	}
-	if len(curParams.RealValues) != 0 && len(curParams.ImaginaryValues) != 0 && len(curParams.ValidValuesIndex) != 0 {
+	if len(curParams.RealValues) != 0 && len(curParams.ImaginaryValues) != 0 && len(curParams.ValidValuesIndex) != 0 && len(curParams.ValidValues) == 0 {
 		indexLength := 1
 		for _, v := range curParams.ValidValuesIndex {
 			indexLength *= v

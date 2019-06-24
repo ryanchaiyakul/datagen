@@ -66,9 +66,9 @@ func GenComplexSlice(config ComplexSliceParams) ([][]complex128, error) {
 	}
 
 	ret := [][]complex128{}
-	for k, intSlice := range intList {
+	for _, intSlice := range intList {
 		tempRet := []complex128{}
-		for _, v := range intSlice {
+		for k, v := range intSlice {
 			tempRet = append(tempRet, config.ValidValues[k][v])
 		}
 		ret = append(ret, tempRet)

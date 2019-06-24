@@ -6,6 +6,8 @@ import (
 	"math"
 	"sync"
 
+	"golang.org/x/sync/semaphore"
+
 	helperlib "github.com/ryanchaiyakul/datagen/internal/helper"
 )
 
@@ -60,7 +62,7 @@ func GenIntSlice(sliceConfig IntSliceParams) ([][]int, error) {
 		return nil, fmt.Errorf("GenSlice : mismatched validValues : %v and dimensions : %v", len(sliceConfig.ValidValues), length)
 	}
 
-	permutationCount := helperlib.GetPermutationIntSlice(sliceConfig.Dimensions, sliceConfig.ValidValues)
+	permutationCount := helperlib.GetPermutationIntSlice(sliceConfig.ValidValues)
 	if len(sliceConfig.Permutations) == 0 {
 		for i := 0; i < permutationCount; i++ {
 			sliceConfig.Permutations = append(sliceConfig.Permutations, i)
@@ -99,26 +101,26 @@ func listPermutations(length int, validValues [][]int, results chan []int, permu
 	case permutationCount < 100:
 		go listPermutationsHelper(&base, &validValues, &permutations, results, 10)
 	case permutationCount < 1000:
-		go listPermutationsHelper(&base, &validValues, &permutations, results, 100)
+		go listPermutationsHelper(&base, &validValues, &permutations, results, 50)
 	default:
-		go listPermutationsHelper(&base, &validValues, &permutations, results, 500)
+		go listPermutationsHelper(&base, &validValues, &permutations, results, 100)
 	}
 }
 
 func listPermutationsHelper(base *[]int, validValues *[][]int, permutations *[]int, results chan []int, routineCount int) {
-	sem := make(chan struct{}, routineCount)
+	sem := semaphore.NewWeighted(int64(routineCount))
 	var wg sync.WaitGroup
 
 	for _, v := range *permutations {
 		wg.Add(1)
-		select {
-		case sem <- struct{}{}:
+		if sem.TryAcquire(1) {
 			go incrementSingleWGSem(base, validValues, v, results, &wg, sem)
-		default:
+		} else {
 			incrementSingle(base, validValues, v, results)
 			wg.Done()
 		}
 	}
+
 	// to close the channel after all the workers are done
 	go func() {
 		wg.Wait()
@@ -127,18 +129,6 @@ func listPermutationsHelper(base *[]int, validValues *[][]int, permutations *[]i
 }
 
 func incrementSingle(base *[]int, validValues *[][]int, addend int, results chan []int) {
-	results <- incrementSingleRet(base, validValues, addend)
-}
-
-func incrementSingleWGSem(base *[]int, validValues *[][]int, addend int, results chan []int, wg *sync.WaitGroup, sem chan struct{}) {
-	defer func() {
-		<-sem
-		wg.Done()
-	}()
-	incrementSingle(base, validValues, addend, results)
-}
-
-func incrementSingleRet(base *[]int, validValues *[][]int, addend int) []int {
 	// a copy is used because otherwise you would mutilate the base list
 	temp := append((*base)[:0:0], (*base)...)
 	for i := 0; i < len(temp); i++ {
@@ -148,8 +138,17 @@ func incrementSingleRet(base *[]int, validValues *[][]int, addend int) []int {
 		addend = addend / len((*validValues)[i])
 
 		if addend == 0 {
-			return temp
+			results <- temp
+			return
 		}
 	}
-	return nil
+	results <- nil
+}
+
+func incrementSingleWGSem(base *[]int, validValues *[][]int, addend int, results chan []int, wg *sync.WaitGroup, sem *semaphore.Weighted) {
+	defer func() {
+		sem.Release(1)
+		wg.Done()
+	}()
+	incrementSingle(base, validValues, addend, results)
 }

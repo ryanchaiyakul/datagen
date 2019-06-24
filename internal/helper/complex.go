@@ -2,6 +2,16 @@ package helperlib
 
 import "errors"
 
+// GetPermutationComplexSlice returns the number of permutations that exist for a certain 1D slice
+// validValues is [][]complex128
+func GetPermutationComplexSlice(validValues [][]complex128) int {
+	ret := 1
+	for i := 0; i < len(validValues); i++ {
+		ret *= len(validValues[i])
+	}
+	return ret
+}
+
 // ReshapeComplexSlice tries to reshape the single int slice into a multidimensional slice
 func ReshapeComplexSlice(dimensions []int, flatSlice []complex128) (interface{}, error) {
 	var ret interface{}

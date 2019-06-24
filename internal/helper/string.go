@@ -3,16 +3,12 @@ package helperlib
 import "errors"
 
 // GetPermutationString returns the number of permutations of a string
-func GetPermutationString(length int, stringValues [][]string) int {
-	stringValuesInt := [][]int{}
-	for _, v := range stringValues {
-		tempSlice := []int{}
-		for range v {
-			tempSlice = append(tempSlice, 0)
-		}
-		stringValuesInt = append(stringValuesInt, tempSlice)
+func GetPermutationString(stringValues [][]string) int {
+	ret := 1
+	for i := 0; i < len(stringValues); i++ {
+		ret *= len(stringValues[i])
 	}
-	return GetPermutationIntSlice([]int{length}, stringValuesInt)
+	return ret
 }
 
 // ReshapeStringSlice tries to reshape the single int slice into a multidimensional slice

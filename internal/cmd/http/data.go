@@ -86,6 +86,7 @@ func getData(r *http.Request) interface{} {
 			}
 			configParam = append(configParam, &tempParam)
 		}
+
 		ret, err := genlib.GenData(configParam, permutationRange)
 		if err == nil {
 			for _, permutation := range ret {

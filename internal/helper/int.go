@@ -4,7 +4,7 @@ import "errors"
 
 // GetPermutationIntSlice returns the number of permutations that exist for a certain 1D slice
 // validValues is [][]int
-func GetPermutationIntSlice(dimensions []int, validValues [][]int) int {
+func GetPermutationIntSlice(validValues [][]int) int {
 	ret := 1
 	for i := 0; i < len(validValues); i++ {
 		ret *= len(validValues[i])
