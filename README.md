@@ -1,6 +1,6 @@
 # DataGen
 
-A HTTP API that returns the requested permutations of an array or string.
+A HTTP API that returns the requested permutations of a custom data type. Currently supports integer, string, and complex numbers as well as their array variations(Up to 4 dimensions).
 
 ## Usage
 

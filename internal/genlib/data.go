@@ -5,42 +5,64 @@ import (
 	"fmt"
 	"math"
 	"sync"
-
-	helperlib "github.com/ryanchaiyakul/datagen/internal/helper"
 )
 
-// DataParams is for GenStruct
+// DataParams is for GenData
 type DataParams struct {
 	Name      string
-	Type      string
-	GenConfig interface{}
+	GenConfig DataGen
 }
 
-// GenData generates a 1D map of the requested data types
-func GenData(config []*DataParams, permutationRange [2]int) ([]map[string]interface{}, error) {
-	var ret []map[string]interface{}
+// DataGen is the standard interface for the data types
+type DataGen interface {
+	Gen() error
+	Extract(int) (interface{}, error)
+	PermutationCount() int
+	SetPermutation([]int)
+}
 
-	if permutationRange[0] == 0 && permutationRange[1] == 0 {
-		permutationRange[1] = getPermutationData(config)
+//GenData returns a list of permutations of the requested data types in map form
+func GenData(config []*DataParams, permutationRange [2]int) ([]map[string]interface{}, error) {
+	// parameter checking
+	if len(config) == 0 {
+		return nil, errors.New("GenData : missing config")
+	}
+	if permutationRange[0] < 0 {
+		return nil, fmt.Errorf("GenData : permutationRange lower bound : %v out of range", permutationRange[0])
+	}
+	permutationCount := getPermutationData(config)
+	if permutationRange[1] > permutationCount {
+		return nil, fmt.Errorf("GenData : permutationRange higher bound : %v out of range", permutationRange[1])
+	} else if permutationRange[0] == 0 && permutationRange[1] == 0 {
+		// if permutationRange is not passed in, all permutations will be generated
+		permutationRange[1] = permutationCount
 	}
 
+	permutationMax, permutationMap, err := setPermutation(config, permutationRange)
+	if err != nil {
+		return nil, err
+	}
+
+	// dynamically generate routineCount and bufferCount for the number of permutations requested
 	routineCount := 0
 	bufferCount := 0
-	switch permutaitonCount := permutationRange[1] - permutationRange[0]; {
-	case permutaitonCount < 100:
+	switch {
+	case permutationCount < 100:
 		routineCount = 10
 		bufferCount = 5
-	case permutaitonCount < 100:
+	case permutationCount < 100:
 		routineCount = 50
 		bufferCount = 10
 	default:
 		routineCount = 100
 		bufferCount = 20
 	}
-
 	results := make(chan map[string]interface{}, bufferCount)
-	go genDataHelper(config, permutationRange, results, routineCount)
 
+	go genDataHelper(config, permutationMap, permutationMax, permutationRange, routineCount, results)
+
+	// handle the results from genDataHelper
+	ret := []map[string]interface{}{}
 	for permutation := range results {
 		if err, ok := permutation["error"]; ok {
 			return nil, err.(error)
@@ -50,18 +72,62 @@ func GenData(config []*DataParams, permutationRange [2]int) ([]map[string]interf
 	return ret, nil
 }
 
-func genDataHelper(config []*DataParams, permutationRange [2]int, results chan map[string]interface{}, routineCount int) {
-	var wg sync.WaitGroup
-	sem := make(chan struct{}, routineCount)
-	wg.Add(permutationRange[1] - permutationRange[0])
-	for i := permutationRange[0]; i < permutationRange[1]; i++ {
-		tempConfig := configCopy(config)
-		if err := setPermutation(tempConfig, i); err == nil {
-			sem <- struct{}{}
-			go genDataMain(tempConfig, &wg, sem, results)
+func setPermutation(config []*DataParams, permutationRange [2]int) (map[string]int, map[string]map[int]int, error) {
+	permutationsMax := map[string]int{}
+	permutationMap := map[string]map[int]int{}
+	tempRange := permutationRange
+
+	for _, v := range config {
+		genConfig := v.GenConfig
+		permutationCount := genConfig.PermutationCount()
+
+		tempMap := map[int]int{}
+		tempPermutations := []int{}
+		if tempRange[0] == 0 && tempRange[1] == 0 {
+			setPermutationHelper(tempPermutations, tempMap, [2]int{0, 1})
 		} else {
-			results <- map[string]interface{}{"error": err}
+			lowerbound := 0
+			upperbound := permutationCount
+			if tempRange[1]-tempRange[0] < permutationCount {
+				lowerbound = int(math.Mod(float64(tempRange[0]), float64(permutationCount)))
+				upperbound = int(math.Mod(float64(tempRange[1]), float64(permutationCount)))
+				// corner case when the upperbound extends past permutationCount but does not fully circle
+				if upperbound < lowerbound {
+					setPermutationHelper(tempPermutations, tempMap, [2]int{0, upperbound})
+					upperbound = permutationCount
+				}
+			}
+			setPermutationHelper(tempPermutations, tempMap, [2]int{lowerbound, upperbound})
+			tempRange[0], tempRange[1] = tempRange[0]/permutationCount, tempRange[1]/permutationCount
 		}
+		permutationsMax[v.Name] = permutationCount
+		permutationMap[v.Name] = tempMap
+		genConfig.SetPermutation(tempPermutations)
+		if err := genConfig.Gen(); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return permutationsMax, permutationMap, nil
+}
+
+func setPermutationHelper(tempPermutations []int, permutationMap map[int]int, bounds [2]int) {
+	index := len(tempPermutations)
+	for i := bounds[0]; i < bounds[1]; i++ {
+		permutationMap[i] = index
+		tempPermutations = append(tempPermutations, i)
+		index++
+	}
+}
+
+func genDataHelper(config []*DataParams, permutationMap map[string]map[int]int, permutationMax map[string]int, permutationRange [2]int, routineCount int, results chan map[string]interface{}) {
+	sem := make(chan struct{}, routineCount)
+	var wg sync.WaitGroup
+	wg.Add(permutationRange[1] - permutationRange[0])
+
+	for i := permutationRange[0]; i < permutationRange[1]; i++ {
+		sem <- struct{}{}
+		go genDataMain(config, permutationMap, permutationMax, i, &wg, sem, results)
 	}
 
 	go func() {
@@ -70,200 +136,28 @@ func genDataHelper(config []*DataParams, permutationRange [2]int, results chan m
 	}()
 }
 
-func genDataMain(config []*DataParams, wg *sync.WaitGroup, sem chan struct{}, results chan map[string]interface{}) {
+func genDataMain(config []*DataParams, permutationMap map[string]map[int]int, permutationMax map[string]int, permutation int, wg *sync.WaitGroup, sem chan struct{}, results chan map[string]interface{}) {
 	defer func() {
 		<-sem
 		wg.Done()
 	}()
 
-	ret := make(map[string]interface{})
+	ret := map[string]interface{}{}
 	for _, v := range config {
-		var retVal interface{}
-		var err error
-		switch v.Type {
-		case "int_slice":
-			sliceConfig := *v.GenConfig.(*IntSliceParams)
-			retList, newErr := GenIntSlice(sliceConfig)
-			if newErr == nil {
-				retMultiList, shapeErr := helperlib.ReshapeIntSlice(sliceConfig.Dimensions, retList[0])
-				if shapeErr == nil {
-					retVal = retMultiList
-				}
-				newErr = shapeErr
-			}
-			err = newErr
-		case "int":
-			retList, newErr := GenInt(*v.GenConfig.(*IntParams))
-			if newErr == nil {
-				retVal = retList[0]
-			}
-			err = newErr
-		case "complex_slice":
-			sliceConfig := *v.GenConfig.(*ComplexSliceParams)
-			retList, newErr := GenComplexSlice(sliceConfig)
-			if newErr == nil {
-				retMultiList, shapeErr := helperlib.ReshapeComplexSlice(sliceConfig.Dimensions, retList[0])
-				if shapeErr == nil {
-					retVal = retMultiList
-				}
-				newErr = shapeErr
-			}
-			err = newErr
-		case "complex":
-			retList, newErr := GenComplex(*v.GenConfig.(*ComplexParams))
-			if newErr == nil {
-				retVal = retList[0]
-			}
-			err = newErr
-		case "string_slice":
-			sliceConfig := *v.GenConfig.(*StringSliceParams)
-			retList, newErr := GenStringSlice(sliceConfig)
-			if newErr == nil {
-				retMultiList, shapeErr := helperlib.ReshapeStringSlice(sliceConfig.Dimensions, retList[0])
-				if shapeErr == nil {
-					retVal = retMultiList
-				}
-				newErr = shapeErr
-			}
-			err = newErr
-		case "string":
-			retList, newErr := GenString(*v.GenConfig.(*StringParams))
-			if newErr == nil {
-				retVal = retList[0]
-			}
-			err = newErr
-		default:
-			results <- map[string]interface{}{"error": fmt.Errorf("GenData : unknown type : %v requested", v.Type)}
-			return
-		}
+		tempInterface, err := v.GenConfig.Extract(int(math.Mod(float64(permutationMap[v.Name][permutation]), float64(permutationMax[v.Name]))))
 		if err != nil {
 			results <- map[string]interface{}{"error": err}
-			return
 		}
-		ret[v.Name] = retVal
+		ret[v.Name] = tempInterface
+		permutation = permutation / permutationMax[v.Name]
 	}
 	results <- ret
-}
-
-func setPermutation(config []*DataParams, permutation int) error {
-	copyPermutation := permutation
-	if len(config) == 0 {
-		return errors.New("setPermutation : missing config")
-	}
-
-	for _, v := range config {
-		if permutation == 0 {
-			switch v.Type {
-			case "int_slice":
-				sliceConfig := v.GenConfig.(*IntSliceParams)
-				sliceConfig.Permutations = []int{0}
-			case "int":
-				intConfig := v.GenConfig.(*IntParams)
-				intConfig.Permutations = []int{0}
-			case "complex_slice":
-				sliceConfig := v.GenConfig.(*ComplexSliceParams)
-				sliceConfig.Permutations = []int{0}
-			case "complex":
-				complexConfig := v.GenConfig.(*ComplexParams)
-				complexConfig.Permutations = []int{0}
-			case "string_slice":
-				sliceConfig := v.GenConfig.(*StringSliceParams)
-				sliceConfig.Permutations = []int{0}
-			case "string":
-				stringConfig := v.GenConfig.(*StringParams)
-				stringConfig.Permutations = []int{0}
-			}
-		} else {
-			permutationCount := 0
-			switch v.Type {
-			case "int_slice":
-				sliceConfig := v.GenConfig.(*IntSliceParams)
-				permutationCount = helperlib.GetPermutationIntSlice(sliceConfig.ValidValues)
-				sliceConfig.Permutations = []int{int(math.Mod(float64(permutation), float64(permutationCount)))}
-			case "int":
-				intConfig := v.GenConfig.(*IntParams)
-				permutationCount = len(intConfig.ValidValues)
-				intConfig.Permutations = []int{int(math.Mod(float64(permutation), float64(permutationCount)))}
-			case "complex_slice":
-				sliceConfig := v.GenConfig.(*ComplexSliceParams)
-				permutationCount = helperlib.GetPermutationComplexSlice(sliceConfig.ValidValues)
-				sliceConfig.Permutations = []int{int(math.Mod(float64(permutation), float64(permutationCount)))}
-			case "complex":
-				complexConfig := v.GenConfig.(*ComplexParams)
-				permutationCount = len(complexConfig.ValidValues)
-				complexConfig.Permutations = []int{int(math.Mod(float64(permutation), float64(permutationCount)))}
-			case "string_slice":
-				sliceConfig := v.GenConfig.(*StringSliceParams)
-				permutationCount = helperlib.GetPermutationString(sliceConfig.StringValues)
-				sliceConfig.Permutations = []int{int(math.Mod(float64(permutation), float64(permutationCount)))}
-			case "string":
-				stringConfig := v.GenConfig.(*StringParams)
-				permutationCount = helperlib.GetPermutationString(stringConfig.StringValues)
-				stringConfig.Permutations = []int{int(math.Mod(float64(permutation), float64(permutationCount)))}
-			}
-			permutation = permutation / permutationCount
-		}
-	}
-	if permutation == 0 {
-		return nil
-	}
-	return fmt.Errorf("setPermutation : permutation : %v out of range", copyPermutation)
-}
-
-func configCopy(config []*DataParams) []*DataParams {
-	ret := []*DataParams{}
-	for _, v := range config {
-		tempParam := *v
-		var tempConfig interface{}
-		switch tempParam.Type {
-		case "int_slice":
-			tempVal := *v.GenConfig.(*IntSliceParams)
-			tempConfig = &tempVal
-		case "int":
-			tempVal := *v.GenConfig.(*IntParams)
-			tempConfig = &tempVal
-		case "complex_slice":
-			tempVal := *v.GenConfig.(*ComplexSliceParams)
-			tempConfig = &tempVal
-		case "complex":
-			tempVal := *v.GenConfig.(*ComplexParams)
-			tempConfig = &tempVal
-		case "string_slice":
-			tempVal := *v.GenConfig.(*StringSliceParams)
-			tempConfig = &tempVal
-		case "string":
-			tempVal := *v.GenConfig.(*StringParams)
-			tempConfig = &tempVal
-		}
-		tempParam.GenConfig = tempConfig
-		ret = append(ret, &tempParam)
-	}
-	return ret
 }
 
 func getPermutationData(config []*DataParams) int {
 	permutationCount := 1
 	for _, v := range config {
-		switch v.Type {
-		case "int_slice":
-			sliceConfig := v.GenConfig.(*IntSliceParams)
-			permutationCount *= helperlib.GetPermutationIntSlice(sliceConfig.ValidValues)
-		case "int":
-			intConfig := v.GenConfig.(*IntParams)
-			permutationCount *= len(intConfig.ValidValues)
-		case "complex_slice":
-			sliceConfig := v.GenConfig.(*ComplexSliceParams)
-			permutationCount *= helperlib.GetPermutationComplexSlice(sliceConfig.ValidValues)
-		case "complex":
-			complexConfig := v.GenConfig.(*ComplexParams)
-			permutationCount *= len(complexConfig.ValidValues)
-		case "string_slice":
-			sliceConfig := v.GenConfig.(*StringSliceParams)
-			permutationCount *= helperlib.GetPermutationString(sliceConfig.StringValues)
-		case "string":
-			stringConfig := v.GenConfig.(*StringParams)
-			permutationCount *= helperlib.GetPermutationString(stringConfig.StringValues)
-		}
+		permutationCount *= v.GenConfig.PermutationCount()
 	}
 	return permutationCount
 }

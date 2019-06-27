@@ -18,10 +18,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var ret interface{}
-
-	ret = getData(r)
-
+	ret := getData(r)
 	switch ret.(type) {
 	case error:
 		w.Write([]byte(fmt.Sprint(ret)))

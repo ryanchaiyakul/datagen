@@ -8,23 +8,29 @@ import (
 	genlib "github.com/ryanchaiyakul/datagen/internal/genlib"
 )
 
-// HTTPStringParams extends StringParams for HTTP parameter insertion
-type HTTPStringParams struct {
-	*genlib.StringParams
+// HTTPStringSliceParams extends StringSliceParams for HTTP parameter insertion
+type HTTPStringSliceParams struct {
+	*genlib.StringSliceParams
 	StringValuesRaw   []string
 	StringValuesIndex []int
 }
 
-// SetParams allows for setting of parameters in HTTPStringParams
-func (curParams *HTTPStringParams) SetParams(k string, v string) error {
+// SetParams allows for setting of parameters in HTTPStringSliceParams
+func (curParams *HTTPStringSliceParams) SetParams(k string, v string) error {
 	switch k {
-	case "length":
-		if len(v) == 1 {
+	case "dimensions":
+		strList := strings.Split(v, ",")
+		for _, v := range strList {
 			if intV, err := strconv.Atoi(v); err == nil {
-				curParams.Length = intV
+				curParams.Dimensions = append(curParams.Dimensions, intV)
 			}
-		} else {
-			return fmt.Errorf("getStringParams : length : %v has more than 1 integer", v)
+		}
+	case "lengths":
+		strList := strings.Split(v, ",")
+		for _, v := range strList {
+			if intV, err := strconv.Atoi(v); err == nil {
+				curParams.Lengths = append(curParams.Lengths, intV)
+			}
 		}
 	case "string_values":
 		strList := strings.Split(v, ",")

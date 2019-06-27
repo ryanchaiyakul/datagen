@@ -10,9 +10,14 @@ import (
 	genlib "github.com/ryanchaiyakul/datagen/internal/genlib"
 )
 
+// DataGenHTTP adds an additional function to the interface
+type DataGenHTTP interface {
+	SetParams(k string, v string) error
+	genlib.DataGen
+}
+
 func getData(r *http.Request) interface{} {
 	if dataList, ok := r.URL.Query()["key"]; ok {
-		configParam := []*genlib.DataParams{}
 		permutationRange := [2]int{}
 		if val, ok := r.URL.Query()["permutation_range"]; ok {
 			strList := strings.Split(val[0], ",")
@@ -25,66 +30,45 @@ func getData(r *http.Request) interface{} {
 				}
 			}
 		}
-		dataStrList := strings.Split(dataList[0], ",")
-		for _, configKey := range dataStrList {
+
+		configParam := []*genlib.DataParams{}
+		for _, configKey := range strings.Split(dataList[0], ",") {
 			tempParam := genlib.DataParams{Name: configKey}
 			if configType, ok := r.URL.Query()[configKey+"_type"]; ok {
-				tempParam.Type = configType[0]
+				var config DataGenHTTP
+				switch configType[0] {
+				case "int_slice":
+					config = &HTTPIntSliceParams{&genlib.IntSliceParams{}, []int{}, []int{}}
+				case "int":
+					config = &HTTPIntParams{&genlib.IntParams{}}
+				case "complex_slice":
+					config = &HTTPComplexSliceParams{&genlib.ComplexSliceParams{}, []int{}, []int{}, []int{}}
+				case "complex":
+					config = &HTTPComplexParams{&genlib.ComplexParams{}, []int{}, []int{}}
+				case "string_slice":
+					config = &HTTPStringSliceParams{&genlib.StringSliceParams{}, []string{}, []int{}}
+				case "string":
+					config = &HTTPStringParams{&genlib.StringParams{}, []string{}, []int{}}
+				default:
+					return fmt.Errorf("getData : unknown type : %v", configType[0])
+				}
+
+				for k, v := range r.URL.Query() {
+					if key := strings.TrimPrefix(k, tempParam.Name+"_"); key != k && key != "type" {
+						if key == "permutation_range" {
+							return fmt.Errorf("getData : cannot specifiy permutation_range for %v", tempParam.Name)
+						}
+						err := config.SetParams(key, v[0])
+						if err != nil {
+							return err
+						}
+					}
+				}
+				tempParam.GenConfig = config
+				configParam = append(configParam, &tempParam)
 			} else {
 				return fmt.Errorf("getData : type : %v does not exist", configKey+"_type")
 			}
-
-			switch tempParam.Type {
-			case "int_slice":
-				tempParam.GenConfig = &genlib.IntSliceParams{}
-			case "int":
-				tempParam.GenConfig = &genlib.IntParams{}
-			case "complex_slice":
-				tempParam.GenConfig = &genlib.ComplexSliceParams{}
-			case "complex":
-				tempParam.GenConfig = &genlib.ComplexParams{}
-			case "string_slice":
-				tempParam.GenConfig = &genlib.StringSliceParams{}
-			case "string":
-				tempParam.GenConfig = &genlib.StringParams{}
-			default:
-				return fmt.Errorf("getData : unknown type : %v", tempParam.Type)
-			}
-
-			for k, v := range r.URL.Query() {
-				if key := strings.TrimPrefix(k, tempParam.Name+"_"); key != k && key != "type" {
-					if key == "permutation_range" {
-						return fmt.Errorf("getData : cannot specifiy permutation_range for %v", tempParam.Name)
-					}
-					var err error
-					switch tempParam.Type {
-					case "int_slice":
-						sliceConfig := tempParam.GenConfig.(*genlib.IntSliceParams)
-						err = getIntSliceParam(key, v, sliceConfig)
-					case "int":
-						intConfig := tempParam.GenConfig.(*genlib.IntParams)
-						err = getIntParam(key, v, intConfig)
-					case "complex_slice":
-						sliceConfig := tempParam.GenConfig.(*genlib.ComplexSliceParams)
-						err = getComplexSliceParam(key, v, sliceConfig)
-					case "complex":
-						complexConfig := tempParam.GenConfig.(*genlib.ComplexParams)
-						err = getComplexParam(key, v, complexConfig)
-					case "string_slice":
-						sliceConfig := tempParam.GenConfig.(*genlib.StringSliceParams)
-						err = getStringSliceParam(key, v, sliceConfig)
-					case "string":
-						stringConfig := tempParam.GenConfig.(*genlib.StringParams)
-						err = getStringParam(key, v, stringConfig)
-					default:
-						return fmt.Errorf("getData : unknown parameter : %v", v)
-					}
-					if err != nil {
-						return err
-					}
-				}
-			}
-			configParam = append(configParam, &tempParam)
 		}
 
 		ret, err := genlib.GenData(configParam, permutationRange)
