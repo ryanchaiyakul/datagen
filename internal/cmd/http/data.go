@@ -55,9 +55,6 @@ func getData(r *http.Request) interface{} {
 
 				for k, v := range r.URL.Query() {
 					if key := strings.TrimPrefix(k, tempParam.Name+"_"); key != k && key != "type" {
-						if key == "permutation_range" {
-							return fmt.Errorf("getData : cannot specifiy permutation_range for %v", tempParam.Name)
-						}
 						err := config.SetParams(key, v[0])
 						if err != nil {
 							return err
