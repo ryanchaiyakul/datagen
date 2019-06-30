@@ -27,15 +27,23 @@ func (config *ComplexSliceParams) Gen() error {
 		}
 		tempValues = append(tempValues, tempSlice)
 	}
+
 	sliceConfig := &IntSliceParams{Dimensions: config.Dimensions, ValidValues: tempValues, Permutations: config.Permutations}
 	intChan, err := sliceConfig.GenChan()
 	if err == nil {
+		config.Results = make([][]complex128, len(config.Permutations))
 		for intSlice := range intChan {
-			tempRet := []complex128{}
-			for k, v := range intSlice {
-				tempRet = append(tempRet, config.ValidValues[k][v])
+			for permK, intSlice := range intSlice {
+				tempRet := []complex128{}
+				for k, v := range intSlice {
+					tempRet = append(tempRet, config.ValidValues[k][v])
+				}
+				index := SliceIndex(len(config.Permutations), func(i int) bool { return config.Permutations[i] == permK })
+				if index == -1 {
+					return fmt.Errorf("Gen : unknown permutation : %v generated", permK)
+				}
+				config.Results[index] = tempRet
 			}
-			config.Results = append(config.Results, tempRet)
 		}
 		return nil
 	}

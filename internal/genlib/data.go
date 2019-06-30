@@ -23,27 +23,26 @@ type DataGen interface {
 
 //GenData returns a list of permutations of the requested data types in map form
 func GenData(config []*DataParams, permutationRange [2]int) ([]map[string]interface{}, error) {
-	// parameter checking
 	if len(config) == 0 {
 		return nil, errors.New("GenData : missing config")
 	}
 	if permutationRange[0] < 0 {
 		return nil, fmt.Errorf("GenData : permutationRange lower bound : %v out of range", permutationRange[0])
 	}
-	permutationCount := getPermutationData(config)
-	if permutationRange[1] > permutationCount {
+
+	permutationTotal := getPermutationData(config)
+	if permutationRange[1] > permutationTotal {
 		return nil, fmt.Errorf("GenData : permutationRange higher bound : %v out of range", permutationRange[1])
 	} else if permutationRange[0] == 0 && permutationRange[1] == 0 {
-		// if permutationRange is not passed in, all permutations will be generated
-		permutationRange[1] = permutationCount
+		permutationRange[1] = permutationTotal
 	}
-
+	permutationCount := permutationRange[1] - permutationRange[0]
 	permutationMax, permutationMap, err := setPermutation(config, permutationRange)
+
 	if err != nil {
 		return nil, err
 	}
 
-	// dynamically generate routineCount and bufferCount for the number of permutations requested
 	routineCount := 0
 	bufferCount := 0
 	switch {
@@ -57,17 +56,17 @@ func GenData(config []*DataParams, permutationRange [2]int) ([]map[string]interf
 		routineCount = 100
 		bufferCount = 20
 	}
-	results := make(chan map[string]interface{}, bufferCount)
+	results := make(chan map[int]map[string]interface{}, bufferCount)
 
 	go genDataHelper(config, permutationMap, permutationMax, permutationRange, routineCount, results)
-
-	// handle the results from genDataHelper
-	ret := []map[string]interface{}{}
+	ret := make([]map[string]interface{}, permutationCount)
 	for permutation := range results {
-		if err, ok := permutation["error"]; ok {
-			return nil, err.(error)
+		for k, v := range permutation {
+			if err, ok := permutation[-1]; ok {
+				return nil, err["error"].(error)
+			}
+			ret[k-permutationRange[0]] = v
 		}
-		ret = append(ret, permutation)
 	}
 	return ret, nil
 }
@@ -84,7 +83,7 @@ func setPermutation(config []*DataParams, permutationRange [2]int) (map[string]i
 		tempMap := map[int]int{}
 		tempPermutations := []int{}
 		if tempRange[0] == 0 && tempRange[1] == 0 {
-			setPermutationHelper(tempPermutations, tempMap, [2]int{0, 1})
+			tempPermutations, tempMap = setPermutationHelper(tempPermutations, tempMap, [2]int{0, 1})
 		} else {
 			lowerbound := 0
 			upperbound := permutationCount
@@ -93,11 +92,11 @@ func setPermutation(config []*DataParams, permutationRange [2]int) (map[string]i
 				upperbound = int(math.Mod(float64(tempRange[1]), float64(permutationCount)))
 				// corner case when the upperbound extends past permutationCount but does not fully circle
 				if upperbound < lowerbound {
-					setPermutationHelper(tempPermutations, tempMap, [2]int{0, upperbound})
+					tempPermutations, tempMap = setPermutationHelper(tempPermutations, tempMap, [2]int{0, upperbound})
 					upperbound = permutationCount
 				}
 			}
-			setPermutationHelper(tempPermutations, tempMap, [2]int{lowerbound, upperbound})
+			tempPermutations, tempMap = setPermutationHelper(tempPermutations, tempMap, [2]int{lowerbound, upperbound})
 			tempRange[0], tempRange[1] = tempRange[0]/permutationCount, tempRange[1]/permutationCount
 		}
 		permutationsMax[v.Name] = permutationCount
@@ -107,20 +106,20 @@ func setPermutation(config []*DataParams, permutationRange [2]int) (map[string]i
 			return nil, nil, err
 		}
 	}
-
 	return permutationsMax, permutationMap, nil
 }
 
-func setPermutationHelper(tempPermutations []int, permutationMap map[int]int, bounds [2]int) {
+func setPermutationHelper(tempPermutations []int, permutationMap map[int]int, bounds [2]int) ([]int, map[int]int) {
 	index := len(tempPermutations)
 	for i := bounds[0]; i < bounds[1]; i++ {
 		permutationMap[i] = index
 		tempPermutations = append(tempPermutations, i)
 		index++
 	}
+	return tempPermutations, permutationMap
 }
 
-func genDataHelper(config []*DataParams, permutationMap map[string]map[int]int, permutationMax map[string]int, permutationRange [2]int, routineCount int, results chan map[string]interface{}) {
+func genDataHelper(config []*DataParams, permutationMap map[string]map[int]int, permutationMax map[string]int, permutationRange [2]int, routineCount int, results chan map[int]map[string]interface{}) {
 	sem := make(chan struct{}, routineCount)
 	var wg sync.WaitGroup
 	wg.Add(permutationRange[1] - permutationRange[0])
@@ -136,22 +135,31 @@ func genDataHelper(config []*DataParams, permutationMap map[string]map[int]int, 
 	}()
 }
 
-func genDataMain(config []*DataParams, permutationMap map[string]map[int]int, permutationMax map[string]int, permutation int, wg *sync.WaitGroup, sem chan struct{}, results chan map[string]interface{}) {
+func genDataMain(config []*DataParams, permutationMap map[string]map[int]int, permutationMax map[string]int, permutation int, wg *sync.WaitGroup, sem chan struct{}, results chan map[int]map[string]interface{}) {
 	defer func() {
 		<-sem
 		wg.Done()
 	}()
-
+	copyPermutation := permutation
 	ret := map[string]interface{}{}
 	for _, v := range config {
-		tempInterface, err := v.GenConfig.Extract(int(math.Mod(float64(permutationMap[v.Name][permutation]), float64(permutationMax[v.Name]))))
+		perm := permutationMap[v.Name][permutation]
+		if permutation > permutationMax[v.Name] {
+			perm = permutation
+		}
+		tempInterface, err := v.GenConfig.Extract(int(math.Mod(float64(perm), float64(permutationMax[v.Name]))))
 		if err != nil {
-			results <- map[string]interface{}{"error": err}
+			results <- map[int]map[string]interface{}{-1: {"error": err}}
+			return
 		}
 		ret[v.Name] = tempInterface
 		permutation = permutation / permutationMax[v.Name]
 	}
-	results <- ret
+	if permutation != 0 {
+		results <- map[int]map[string]interface{}{-1: {"error": fmt.Sprintf("genDataMain : permutation : %v out of range", copyPermutation)}}
+		return
+	}
+	results <- map[int]map[string]interface{}{copyPermutation: ret}
 }
 
 func getPermutationData(config []*DataParams) int {

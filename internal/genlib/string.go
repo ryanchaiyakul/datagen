@@ -41,12 +41,19 @@ func (config *StringParams) Gen() error {
 	intChan, err := sliceConfig.GenChan()
 
 	if err == nil {
-		for intSlice := range intChan {
+		config.Results = make([]string, len(config.Permutations))
+		for permutation := range intChan {
 			temp := ""
-			for _, v := range intSlice {
-				temp += string(v)
+			for k, intSlice := range permutation {
+				for _, v := range intSlice {
+					temp += string(v)
+				}
+				index := SliceIndex(len(config.Permutations), func(i int) bool { return config.Permutations[i] == k })
+				if index == -1 {
+					return fmt.Errorf("Gen : unknown permutation : %v generated", k)
+				}
+				config.Results = append(config.Results, temp)
 			}
-			config.Results = append(config.Results, temp)
 		}
 		return nil
 	}

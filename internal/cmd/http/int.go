@@ -13,6 +13,10 @@ type HTTPIntParams struct {
 	*genlib.IntParams
 }
 
+func init() {
+	HTTPParams["int"] = &HTTPIntParams{&genlib.IntParams{}}
+}
+
 // SetParams allows for setting of parameters in HTTPIntParams
 func (curParams *HTTPIntParams) SetParams(k string, v string) error {
 	switch k {
@@ -26,4 +30,9 @@ func (curParams *HTTPIntParams) SetParams(k string, v string) error {
 		return fmt.Errorf("getIntParam : unknown parameter : %v", k)
 	}
 	return nil
+}
+
+// New returns an empty object of the same config type
+func (curParams *HTTPIntParams) New() DataGenHTTP {
+	return &HTTPIntParams{&genlib.IntParams{}}
 }

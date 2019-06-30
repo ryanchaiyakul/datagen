@@ -11,9 +11,13 @@ import (
 // HTTPComplexSliceParams extends ComplexSliceParams for HTTP parameter insertion
 type HTTPComplexSliceParams struct {
 	*genlib.ComplexSliceParams
-	RealValues       []int
-	ImaginaryValues  []int
+	RealValues       []float64
+	ImaginaryValues  []float64
 	ValidValuesIndex []int
+}
+
+func init() {
+	HTTPParams["complex_slice"] = &HTTPComplexSliceParams{&genlib.ComplexSliceParams{}, []float64{}, []float64{}, []int{}}
 }
 
 // SetParams allows for setting of parameters in HTTPComplexSliceParams
@@ -29,15 +33,15 @@ func (curParams *HTTPComplexSliceParams) SetParams(k string, v string) error {
 	case "real_values":
 		strList := strings.Split(v, ",")
 		for _, v := range strList {
-			if intV, err := strconv.Atoi(v); err == nil {
-				curParams.RealValues = append(curParams.RealValues, intV)
+			if floatV, err := strconv.ParseFloat(v, 64); err == nil {
+				curParams.RealValues = append(curParams.RealValues, floatV)
 			}
 		}
 	case "imaginary_values":
 		strList := strings.Split(v, ",")
 		for _, v := range strList {
-			if intV, err := strconv.Atoi(v); err == nil {
-				curParams.ImaginaryValues = append(curParams.ImaginaryValues, intV)
+			if floatV, err := strconv.ParseFloat(v, 64); err == nil {
+				curParams.ImaginaryValues = append(curParams.ImaginaryValues, floatV)
 			}
 		}
 	case "valid_values_index":
@@ -53,9 +57,9 @@ func (curParams *HTTPComplexSliceParams) SetParams(k string, v string) error {
 		}
 	}
 	if len(curParams.RealValues) != 0 && len(curParams.ImaginaryValues) != 0 && len(curParams.ValidValuesIndex) != 0 && len(curParams.ValidValues) == 0 {
-		indexLength := 1
+		indexLength := 0
 		for _, v := range curParams.ValidValuesIndex {
-			indexLength *= v
+			indexLength += v
 		}
 
 		if len(curParams.RealValues) != len(curParams.ImaginaryValues) || len(curParams.RealValues) != indexLength {
@@ -73,4 +77,9 @@ func (curParams *HTTPComplexSliceParams) SetParams(k string, v string) error {
 		}
 	}
 	return nil
+}
+
+// New returns an empty object of the same config type
+func (curParams *HTTPComplexSliceParams) New() DataGenHTTP {
+	return &HTTPComplexSliceParams{&genlib.ComplexSliceParams{}, []float64{}, []float64{}, []int{}}
 }

@@ -22,6 +22,7 @@ func (config *ComplexParams) Gen() error {
 	for i := 0; i < int(len(config.ValidValues)); i++ {
 		tempValues = append(tempValues, i)
 	}
+
 	intConfig := &IntParams{ValidValues: tempValues, Permutations: config.Permutations}
 	err := intConfig.Gen()
 	if err == nil {

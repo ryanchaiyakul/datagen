@@ -7,8 +7,8 @@ import (
 	"sync"
 )
 
-// GenChan streams the resulting permutations of IntSliceParams
-func (config *IntSliceParams) GenChan() (chan map[int][]int, error) {
+// GenChan streams the resulting permutations of FloatSliceParams
+func (config *FloatSliceParams) GenChan() (chan map[int][]float64, error) {
 	if len(config.Dimensions) == 0 {
 		return nil, errors.New("GenSlice : missing dimensions")
 	}
@@ -46,25 +46,25 @@ func (config *IntSliceParams) GenChan() (chan map[int][]int, error) {
 		bufferCount = 20
 	}
 
-	permutationChan := make(chan map[int][]int, bufferCount)
+	permutationChan := make(chan map[int][]float64, bufferCount)
 
-	base := []int{}
+	base := []float64{}
 	for i := 0; i < len(config.ValidValues); i++ {
 		base = append(base, config.ValidValues[i][0])
 	}
 
-	go genIntSliceHelper(&base, &config.ValidValues, &config.Permutations, permutationChan, routineCount)
+	go genFloatSliceHelper(&base, &config.ValidValues, &config.Permutations, permutationChan, routineCount)
 	return permutationChan, nil
 }
 
-func genIntSliceHelper(base *[]int, validValues *[][]int, permutations *[]int, results chan map[int][]int, routineCount int) {
-	sem := make(chan struct{}, routineCount)
+func genFloatSliceHelper(base *[]float64, validValues *[][]float64, permutations *[]int, results chan map[int][]float64, routineCount int) {
+	sem := make(chan struct{})
 	var wg sync.WaitGroup
-	wg.Add(len(*permutations))
 
 	for _, v := range *permutations {
+		wg.Add(1)
 		sem <- struct{}{}
-		go incrementSingleWGSem(base, validValues, v, results, &wg, sem)
+		go incrementSingleFloat(base, validValues, v, results, &wg, sem)
 	}
 
 	go func() {
@@ -73,7 +73,7 @@ func genIntSliceHelper(base *[]int, validValues *[][]int, permutations *[]int, r
 	}()
 }
 
-func incrementSingleWGSem(base *[]int, validValues *[][]int, addend int, results chan map[int][]int, wg *sync.WaitGroup, sem chan struct{}) {
+func incrementSingleFloat(base *[]float64, validValues *[][]float64, addend int, results chan map[int][]float64, wg *sync.WaitGroup, sem chan struct{}) {
 	defer func() {
 		<-sem
 		wg.Done()
@@ -87,31 +87,9 @@ func incrementSingleWGSem(base *[]int, validValues *[][]int, addend int, results
 		addend = addend / len((*validValues)[i])
 
 		if addend == 0 {
-			results <- map[int][]int{addendCopy: temp}
+			results <- map[int][]float64{addendCopy: temp}
 			return
 		}
 	}
 	results <- nil
-}
-
-// SliceIndex returns the location of the value in the slice
-// returns -1 if it does not exist
-func SliceIndex(limit int, predicate func(i int) bool) int {
-	for i := 0; i < limit; i++ {
-		if predicate(i) {
-			return i
-		}
-	}
-	return -1
-}
-
-// DimensionsLength returns the length of the requested slice when flattened
-func DimensionsLength(dimensions []int) int {
-	ret := dimensions[0]
-	if len(dimensions) > 1 {
-		for _, v := range dimensions[1:] {
-			ret *= v
-		}
-	}
-	return ret
 }

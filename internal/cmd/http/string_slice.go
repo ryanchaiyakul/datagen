@@ -15,6 +15,10 @@ type HTTPStringSliceParams struct {
 	StringValuesIndex []int
 }
 
+func init() {
+	HTTPParams["string_slice"] = &HTTPStringSliceParams{&genlib.StringSliceParams{}, []string{}, []int{}}
+}
+
 // SetParams allows for setting of parameters in HTTPStringSliceParams
 func (curParams *HTTPStringSliceParams) SetParams(k string, v string) error {
 	switch k {
@@ -62,4 +66,9 @@ func (curParams *HTTPStringSliceParams) SetParams(k string, v string) error {
 		}
 	}
 	return nil
+}
+
+// New returns an empty object of the same config type
+func (curParams *HTTPStringSliceParams) New() DataGenHTTP {
+	return &HTTPStringSliceParams{&genlib.StringSliceParams{}, []string{}, []int{}}
 }

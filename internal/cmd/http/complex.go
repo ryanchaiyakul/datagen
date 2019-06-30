@@ -11,8 +11,12 @@ import (
 // HTTPComplexParams extends ComplexParams for HTTP parameter insertion
 type HTTPComplexParams struct {
 	*genlib.ComplexParams
-	RealValues      []int
-	ImaginaryValues []int
+	RealValues      []float64
+	ImaginaryValues []float64
+}
+
+func init() {
+	HTTPParams["complex"] = &HTTPComplexParams{&genlib.ComplexParams{}, []float64{}, []float64{}}
 }
 
 // SetParams allows for setting of parameters in HTTPComplexParams
@@ -21,15 +25,15 @@ func (curParams *HTTPComplexParams) SetParams(k string, v string) error {
 	case "real_values":
 		strList := strings.Split(v, ",")
 		for _, v := range strList {
-			if intV, err := strconv.Atoi(v); err == nil {
-				curParams.RealValues = append(curParams.RealValues, intV)
+			if floatV, err := strconv.ParseFloat(v, 64); err == nil {
+				curParams.RealValues = append(curParams.RealValues, floatV)
 			}
 		}
 	case "imaginary_values":
 		strList := strings.Split(v, ",")
 		for _, v := range strList {
-			if intV, err := strconv.Atoi(v); err == nil {
-				curParams.ImaginaryValues = append(curParams.ImaginaryValues, intV)
+			if floatV, err := strconv.ParseFloat(v, 64); err == nil {
+				curParams.ImaginaryValues = append(curParams.ImaginaryValues, floatV)
 			}
 		}
 	default:
@@ -48,57 +52,7 @@ func (curParams *HTTPComplexParams) SetParams(k string, v string) error {
 	return nil
 }
 
-func stringComplex(v interface{}) interface{} {
-	switch v.(type) {
-	case complex128:
-		v = strings.Trim(strings.Trim(fmt.Sprint(v), "("), ")")
-	case []complex128:
-		ret := []string{}
-		for _, complexVal := range v.([]complex128) {
-			ret = append(ret, fmt.Sprint(strings.Trim(strings.Trim(fmt.Sprint(complexVal), "("), ")")))
-		}
-		v = ret
-	case [][]complex128:
-		ret := [][]string{}
-		for _, complexSlice := range v.([][]complex128) {
-			tempSlice := []string{}
-			for _, complexVal := range complexSlice {
-				tempSlice = append(tempSlice, fmt.Sprint(strings.Trim(strings.Trim(fmt.Sprint(complexVal), "("), ")")))
-			}
-		}
-		v = ret
-	case [][][]complex128:
-		ret := [][][]string{}
-		for _, complex2DSlice := range v.([][][]complex128) {
-			temp2DSlice := [][]string{}
-			for _, complexSlice := range complex2DSlice {
-				tempSlice := []string{}
-				for _, complexVal := range complexSlice {
-					tempSlice = append(tempSlice, fmt.Sprint(strings.Trim(strings.Trim(fmt.Sprint(complexVal), "("), ")")))
-				}
-				temp2DSlice = append(temp2DSlice, tempSlice)
-			}
-			ret = append(ret, temp2DSlice)
-		}
-		v = ret
-	case [][][][]complex128:
-		ret := [][][][]string{}
-		for _, complex3DSlice := range v.([][][][]complex128) {
-			temp3DSlice := [][][]string{}
-			for _, complex2DSlice := range complex3DSlice {
-				temp2DSlice := [][]string{}
-				for _, complexSlice := range complex2DSlice {
-					tempSlice := []string{}
-					for _, complexVal := range complexSlice {
-						tempSlice = append(tempSlice, fmt.Sprint(strings.Trim(strings.Trim(fmt.Sprint(complexVal), "("), ")")))
-					}
-					temp2DSlice = append(temp2DSlice, tempSlice)
-				}
-				temp3DSlice = append(temp3DSlice, temp2DSlice)
-			}
-			ret = append(ret, temp3DSlice)
-		}
-		v = ret
-	}
-	return v
+// New returns an empty object of the same config type
+func (curParams *HTTPComplexParams) New() DataGenHTTP {
+	return &HTTPComplexParams{&genlib.ComplexParams{}, []float64{}, []float64{}}
 }

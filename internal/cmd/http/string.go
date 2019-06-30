@@ -15,6 +15,10 @@ type HTTPStringParams struct {
 	StringValuesIndex []int
 }
 
+func init() {
+	HTTPParams["string"] = &HTTPStringParams{&genlib.StringParams{}, []string{}, []int{}}
+}
+
 // SetParams allows for setting of parameters in HTTPStringParams
 func (curParams *HTTPStringParams) SetParams(k string, v string) error {
 	switch k {
@@ -56,4 +60,9 @@ func (curParams *HTTPStringParams) SetParams(k string, v string) error {
 		}
 	}
 	return nil
+}
+
+// New returns an empty object of the same config type
+func (curParams *HTTPStringParams) New() DataGenHTTP {
+	return &HTTPStringParams{&genlib.StringParams{}, []string{}, []int{}}
 }
