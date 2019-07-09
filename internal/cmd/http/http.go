@@ -1,4 +1,4 @@
-package httpmainlib
+package httplib
 
 import (
 	"encoding/json"

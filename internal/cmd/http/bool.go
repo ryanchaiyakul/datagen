@@ -1,4 +1,4 @@
-package httpmainlib
+package httplib
 
 import (
 	"github.com/ryanchaiyakul/datagen/internal/genlib"
